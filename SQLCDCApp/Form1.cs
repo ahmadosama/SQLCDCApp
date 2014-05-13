@@ -192,6 +192,12 @@ namespace SQLCDCApp
 
         private void button1_Click(object sender, EventArgs e)
         {
+
+            fn_ListTables();
+        }
+        
+        private void fn_ListTables()
+        {
             List<Tables> tablelist = new List<Tables>();
             SQLCDCApp obj = new SQLCDCApp();
             List<string> dblist = new List<string>();
@@ -214,12 +220,12 @@ namespace SQLCDCApp
 
                 }
             }
-            
+
             tablelist = obj.fn_GetTables(dblist);
 
             dataGridView_tables.DataSource = tablelist;
 
-            if (dataGridView_tables.ColumnCount < 4)
+            if (dataGridView_tables.ColumnCount < 5)
             {
                 DataGridViewCheckBoxColumn cb = new DataGridViewCheckBoxColumn();
                 cb.Frozen = true;
@@ -232,8 +238,102 @@ namespace SQLCDCApp
                 cb.FalseValue = 0;
             }
 
-            //dataGridView_tables.Columns[1].ReadOnly = true;
-            //dataGridView_tables.Columns[2].ReadOnly = true;
         }
+
+        private void button_cdctable_Click(object sender, EventArgs e)
+        {
+            SQLCDCApp scdc = new SQLCDCApp();
+            List<CDC> cdclist = new List<CDC>();
+
+            if(string.IsNullOrEmpty(textBox_rolename.Text))
+            {
+                MessageBox.Show("Role Name can't be blank", "Information");
+                return;
+            }
+
+           // CDC cdcobj = new CDC();
+
+            List<DataGridViewRow> rows_with_checked_column = new List<DataGridViewRow>();
+
+            foreach (DataGridViewRow row in dataGridView_tables.Rows)
+            {
+                if (Convert.ToBoolean(row.Cells[0].Value) == true)
+                {
+                    rows_with_checked_column.Add(row);
+                }
+            }
+
+            foreach (DataGridViewRow dgvr in rows_with_checked_column)
+            {
+                CDC cdcobj = new CDC();
+              
+                if(dgvr.Cells[4].Value.ToString()=="False")
+                {
+                    cdcobj.Databasename = dgvr.Cells[1].Value.ToString().Trim();
+                    cdcobj.source_schema = dgvr.Cells[2].Value.ToString().Trim();
+                    cdcobj.source_name = dgvr.Cells[3].Value.ToString().Trim();
+                    cdcobj.role_name = textBox_rolename.Text.Trim(); ;
+                    cdcobj.capture_instance = textBox_captureinstance.Text.Trim();
+                    cdcobj.index_name = textBox_indexname.Text.Trim();
+                    cdcobj.captured_column_list = textBox_capturedcollist.Text.Trim();
+                    cdcobj.filegroup_name = textBox_filegroupname.Text.Trim();
+                    if(checkBox_netchanges.Checked==true)
+                    {
+                        cdcobj.supports_net_changes=1;
+                    }
+                    else
+                    {
+                        cdcobj.supports_net_changes = 0;
+                    }
+                    if(checkBox_allowpartitionswitch.Checked==true)
+                    {
+                        cdcobj.allow_partition_switch = 1;
+                    }
+                    else
+                    {
+                        cdcobj.allow_partition_switch = 0;
+                    }
+
+                    cdclist.Add(cdcobj);
+                }
+            }
+
+            MessageBox.Show(scdc.fn_EnableCDCOnTable(cdclist,true).ToString());
+            fn_ListTables();
+        }
+
+        private void button_Disablecdctable_Click(object sender, EventArgs e)
+        {
+            List<DataGridViewRow> rows_with_checked_column = new List<DataGridViewRow>();
+            SQLCDCApp scdc = new SQLCDCApp();
+            List<CDC> cdclist = new List<CDC>();
+
+            foreach (DataGridViewRow row in dataGridView_tables.Rows)
+            {
+                if (Convert.ToBoolean(row.Cells[0].Value) == true)
+                {
+                    rows_with_checked_column.Add(row);
+                }
+            }
+
+            foreach (DataGridViewRow dgvr in rows_with_checked_column)
+            {
+                CDC cdcobj = new CDC();
+
+                if (dgvr.Cells[4].Value.ToString() == "True")
+                {
+                    cdcobj.Databasename = dgvr.Cells[1].Value.ToString().Trim();
+                    cdcobj.source_schema = dgvr.Cells[2].Value.ToString().Trim();
+                    cdcobj.source_name = dgvr.Cells[3].Value.ToString().Trim();
+                    cdcobj.capture_instance = textBox_captureinstance.Text.Trim();
+                    cdclist.Add(cdcobj);
+                }
+            }
+
+            MessageBox.Show(scdc.fn_EnableCDCOnTable(cdclist, false).ToString());
+            fn_ListTables();
+        }
+
+       
     }
 }

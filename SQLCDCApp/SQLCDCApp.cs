@@ -174,7 +174,8 @@ namespace SQLCDCApp
                 foreach (string db in Dblist)
                 {
                     _Sqlcon.ChangeDatabase(db);
-                    string Qrygettables = "Select '" + db + "',name,is_tracked_by_cdc from sys.Tables order by is_tracked_by_cdc desc";
+                    string Qrygettables = "Select '" + db + "',[schemaname]=ss.name,st.name,is_tracked_by_cdc from sys.Tables st  " +
+                        "join sys.schemas ss on st.schema_id=ss.schema_id order by name";
                     SqlCommand SQLGetDatabases = new SqlCommand(Qrygettables, _Sqlcon);
                     
                     Datareader = SQLGetDatabases.ExecuteReader();
@@ -182,8 +183,9 @@ namespace SQLCDCApp
                     {
                         Tables _tb = new Tables();
                         _tb.Databasename = Datareader[0].ToString();
-                        _tb.name = Datareader[1].ToString();
-                        _tb.is_tracked_by_cdc = Datareader[2].ToString();
+                        _tb.schema = Datareader[1].ToString();
+                       _tb.name = Datareader[2].ToString();
+                       _tb.is_tracked_by_cdc = Datareader[3].ToString();
                         _listtables.Add(_tb);
                     }
                     Datareader.Close();
@@ -204,17 +206,68 @@ namespace SQLCDCApp
             }
         }
 
+        public string fn_EnableCDCOnTable(List<CDC> cdclist,bool Enable)
+        {
+            string QryEnableCdcOnTable = "";
+            foreach (CDC cdcobj in cdclist)
+            {
+                if (Enable)
+                {
+                    QryEnableCdcOnTable = "EXECUTE sys.sp_cdc_enable_table @source_schema = '" + cdcobj.source_schema + "' , @source_name = '" + cdcobj.source_name + "', @role_name = '" + cdcobj.role_name + "',";
+                }else
+                {
+                    QryEnableCdcOnTable = "EXECUTE sys.sp_cdc_disable_table @source_schema = '" + cdcobj.source_schema + "' , @source_name = '" + cdcobj.source_name + "'";
+                }
+                if (!string.IsNullOrEmpty(cdcobj.capture_instance))
+                {
+                    QryEnableCdcOnTable = QryEnableCdcOnTable + " @capture_instance='" + cdcobj.capture_instance + "',";
+                }else if(string.IsNullOrEmpty(cdcobj.capture_instance) && Enable==false)
+                {
+                    QryEnableCdcOnTable = QryEnableCdcOnTable + " ,@capture_instance='all',";
+                }
+                if (!string.IsNullOrEmpty(cdcobj.index_name))
+                {
+                    QryEnableCdcOnTable = QryEnableCdcOnTable + " @index_name='" + cdcobj.index_name + "',";
+                }
+
+                if (!string.IsNullOrEmpty(cdcobj.captured_column_list))
+                {
+                    QryEnableCdcOnTable = QryEnableCdcOnTable + " @captured_column_list='" + cdcobj.captured_column_list + "',";
+                }
+
+                if (!string.IsNullOrEmpty(cdcobj.filegroup_name))
+                {
+                    QryEnableCdcOnTable = QryEnableCdcOnTable + " @filegroup_name='" + cdcobj.filegroup_name + "',";
+                }
+            
+                if (cdcobj.supports_net_changes == 1)
+                {
+                    QryEnableCdcOnTable = QryEnableCdcOnTable + " @supports_net_changes='" + cdcobj.supports_net_changes + "',";
+                }
+                if (cdcobj.allow_partition_switch == 1)
+                {
+                    QryEnableCdcOnTable = QryEnableCdcOnTable + " @allow_partition_switch='" + cdcobj.allow_partition_switch + "',";
+                }
+
+                fn_ExecuteQuery(QryEnableCdcOnTable.Substring(0,QryEnableCdcOnTable.Length-1), cdcobj.Databasename);
+            }
+            return "Work done";
+        } 
+
+        
     }
+
 
     class Tables
     {
         public string Databasename { get; set; }
+        public string schema { get; set; }
         public string name { get; set; }
         public string is_tracked_by_cdc { get; set; }
 
     }
 
-    class CDC
+    class CDC:Tables
     {
         /*
          [ @source_schema = ] 'source_schema', 
@@ -231,12 +284,14 @@ namespace SQLCDCApp
         public string source_schema { get; set; }
         public string source_name { get; set; }
         public string capture_instance { get; set; }
-        public string supports_net_changes { get; set; }
+        public byte supports_net_changes { get; set; }
         public string role_name { get; set; }
         public string index_name { get; set; }
         public string captured_column_list { get; set; }
         public string filegroup_name { get; set; }
-        public string allow_partition_switch { get; set; }
+        public byte allow_partition_switch { get; set; }
+        public List<CDC> cdclist { get; set; }
+        
 
 
     }

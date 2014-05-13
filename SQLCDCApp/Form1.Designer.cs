@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.groupBox_SqlCon = new System.Windows.Forms.GroupBox();
+            this.button_disablecdc = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.button_selectdb = new System.Windows.Forms.Button();
             this.dataGridView_Databases = new System.Windows.Forms.DataGridView();
@@ -41,11 +42,22 @@
             this.label_Auth = new System.Windows.Forms.Label();
             this.textBox_Server = new System.Windows.Forms.TextBox();
             this.label_Server = new System.Windows.Forms.Label();
-            this.button_disablecdc = new System.Windows.Forms.Button();
             this.dataGridView_tables = new System.Windows.Forms.DataGridView();
             this.button_cdctable = new System.Windows.Forms.Button();
             this.groupBox_cdctableoption = new System.Windows.Forms.GroupBox();
-            this.checkedListBox1 = new System.Windows.Forms.CheckedListBox();
+            this.textBox_filegroupname = new System.Windows.Forms.TextBox();
+            this.label_filegroup_name = new System.Windows.Forms.Label();
+            this.textBox_capturedcollist = new System.Windows.Forms.TextBox();
+            this.label_captured_column_list = new System.Windows.Forms.Label();
+            this.textBox_indexname = new System.Windows.Forms.TextBox();
+            this.label_indexname = new System.Windows.Forms.Label();
+            this.checkBox_netchanges = new System.Windows.Forms.CheckBox();
+            this.textBox_captureinstance = new System.Windows.Forms.TextBox();
+            this.label_captureinstance = new System.Windows.Forms.Label();
+            this.textBox_rolename = new System.Windows.Forms.TextBox();
+            this.label_rolename = new System.Windows.Forms.Label();
+            this.checkBox_allowpartitionswitch = new System.Windows.Forms.CheckBox();
+            this.button_Disablecdctable = new System.Windows.Forms.Button();
             this.groupBox_SqlCon.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView_Databases)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView_tables)).BeginInit();
@@ -74,6 +86,16 @@
             this.groupBox_SqlCon.TabIndex = 0;
             this.groupBox_SqlCon.TabStop = false;
             this.groupBox_SqlCon.Text = "Connect To Server";
+            // 
+            // button_disablecdc
+            // 
+            this.button_disablecdc.Location = new System.Drawing.Point(130, 403);
+            this.button_disablecdc.Name = "button_disablecdc";
+            this.button_disablecdc.Size = new System.Drawing.Size(75, 23);
+            this.button_disablecdc.TabIndex = 12;
+            this.button_disablecdc.Text = "Disable CDC";
+            this.button_disablecdc.UseVisualStyleBackColor = true;
+            this.button_disablecdc.Click += new System.EventHandler(this.button_disablecdc_Click);
             // 
             // button1
             // 
@@ -189,58 +211,163 @@
             this.label_Server.TabIndex = 0;
             this.label_Server.Text = "Server";
             // 
-            // button_disablecdc
-            // 
-            this.button_disablecdc.Location = new System.Drawing.Point(130, 403);
-            this.button_disablecdc.Name = "button_disablecdc";
-            this.button_disablecdc.Size = new System.Drawing.Size(75, 23);
-            this.button_disablecdc.TabIndex = 12;
-            this.button_disablecdc.Text = "Disable CDC";
-            this.button_disablecdc.UseVisualStyleBackColor = true;
-            this.button_disablecdc.Click += new System.EventHandler(this.button_disablecdc_Click);
-            // 
             // dataGridView_tables
             // 
             this.dataGridView_tables.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridView_tables.Location = new System.Drawing.Point(352, 35);
             this.dataGridView_tables.Name = "dataGridView_tables";
-            this.dataGridView_tables.Size = new System.Drawing.Size(487, 151);
+            this.dataGridView_tables.Size = new System.Drawing.Size(416, 193);
             this.dataGridView_tables.TabIndex = 1;
             // 
             // button_cdctable
             // 
-            this.button_cdctable.Location = new System.Drawing.Point(353, 412);
+            this.button_cdctable.Location = new System.Drawing.Point(11, 176);
             this.button_cdctable.Name = "button_cdctable";
-            this.button_cdctable.Size = new System.Drawing.Size(75, 23);
+            this.button_cdctable.Size = new System.Drawing.Size(98, 23);
             this.button_cdctable.TabIndex = 2;
-            this.button_cdctable.Text = "Enable CDC";
+            this.button_cdctable.Text = "Capture Table";
             this.button_cdctable.UseVisualStyleBackColor = true;
+            this.button_cdctable.Click += new System.EventHandler(this.button_cdctable_Click);
             // 
             // groupBox_cdctableoption
             // 
-            this.groupBox_cdctableoption.Controls.Add(this.checkedListBox1);
-            this.groupBox_cdctableoption.Location = new System.Drawing.Point(353, 192);
+            this.groupBox_cdctableoption.Controls.Add(this.button_Disablecdctable);
+            this.groupBox_cdctableoption.Controls.Add(this.button_cdctable);
+            this.groupBox_cdctableoption.Controls.Add(this.checkBox_allowpartitionswitch);
+            this.groupBox_cdctableoption.Controls.Add(this.textBox_filegroupname);
+            this.groupBox_cdctableoption.Controls.Add(this.label_filegroup_name);
+            this.groupBox_cdctableoption.Controls.Add(this.textBox_capturedcollist);
+            this.groupBox_cdctableoption.Controls.Add(this.label_captured_column_list);
+            this.groupBox_cdctableoption.Controls.Add(this.textBox_indexname);
+            this.groupBox_cdctableoption.Controls.Add(this.label_indexname);
+            this.groupBox_cdctableoption.Controls.Add(this.checkBox_netchanges);
+            this.groupBox_cdctableoption.Controls.Add(this.textBox_captureinstance);
+            this.groupBox_cdctableoption.Controls.Add(this.label_captureinstance);
+            this.groupBox_cdctableoption.Controls.Add(this.textBox_rolename);
+            this.groupBox_cdctableoption.Controls.Add(this.label_rolename);
+            this.groupBox_cdctableoption.Location = new System.Drawing.Point(352, 234);
             this.groupBox_cdctableoption.Name = "groupBox_cdctableoption";
-            this.groupBox_cdctableoption.Size = new System.Drawing.Size(486, 189);
+            this.groupBox_cdctableoption.Size = new System.Drawing.Size(416, 221);
             this.groupBox_cdctableoption.TabIndex = 3;
             this.groupBox_cdctableoption.TabStop = false;
             this.groupBox_cdctableoption.Text = "Table CDC Options";
             // 
-            // checkedListBox1
+            // textBox_filegroupname
             // 
-            this.checkedListBox1.FormattingEnabled = true;
-            this.checkedListBox1.Location = new System.Drawing.Point(18, 20);
-            this.checkedListBox1.Name = "checkedListBox1";
-            this.checkedListBox1.Size = new System.Drawing.Size(129, 154);
-            this.checkedListBox1.TabIndex = 0;
+            this.textBox_filegroupname.Location = new System.Drawing.Point(118, 132);
+            this.textBox_filegroupname.Name = "textBox_filegroupname";
+            this.textBox_filegroupname.Size = new System.Drawing.Size(100, 20);
+            this.textBox_filegroupname.TabIndex = 10;
+            // 
+            // label_filegroup_name
+            // 
+            this.label_filegroup_name.AutoSize = true;
+            this.label_filegroup_name.Location = new System.Drawing.Point(33, 139);
+            this.label_filegroup_name.Name = "label_filegroup_name";
+            this.label_filegroup_name.Size = new System.Drawing.Size(76, 13);
+            this.label_filegroup_name.TabIndex = 9;
+            this.label_filegroup_name.Text = "filegroup name";
+            // 
+            // textBox_capturedcollist
+            // 
+            this.textBox_capturedcollist.Location = new System.Drawing.Point(118, 106);
+            this.textBox_capturedcollist.Name = "textBox_capturedcollist";
+            this.textBox_capturedcollist.Size = new System.Drawing.Size(100, 20);
+            this.textBox_capturedcollist.TabIndex = 8;
+            // 
+            // label_captured_column_list
+            // 
+            this.label_captured_column_list.AutoSize = true;
+            this.label_captured_column_list.Location = new System.Drawing.Point(8, 113);
+            this.label_captured_column_list.Name = "label_captured_column_list";
+            this.label_captured_column_list.Size = new System.Drawing.Size(101, 13);
+            this.label_captured_column_list.TabIndex = 7;
+            this.label_captured_column_list.Text = "captured column list";
+            // 
+            // textBox_indexname
+            // 
+            this.textBox_indexname.Location = new System.Drawing.Point(118, 80);
+            this.textBox_indexname.Name = "textBox_indexname";
+            this.textBox_indexname.Size = new System.Drawing.Size(100, 20);
+            this.textBox_indexname.TabIndex = 6;
+            // 
+            // label_indexname
+            // 
+            this.label_indexname.AutoSize = true;
+            this.label_indexname.Location = new System.Drawing.Point(45, 83);
+            this.label_indexname.Name = "label_indexname";
+            this.label_indexname.Size = new System.Drawing.Size(64, 13);
+            this.label_indexname.TabIndex = 5;
+            this.label_indexname.Text = "Index Name";
+            // 
+            // checkBox_netchanges
+            // 
+            this.checkBox_netchanges.AutoSize = true;
+            this.checkBox_netchanges.Location = new System.Drawing.Point(251, 27);
+            this.checkBox_netchanges.Name = "checkBox_netchanges";
+            this.checkBox_netchanges.Size = new System.Drawing.Size(128, 17);
+            this.checkBox_netchanges.TabIndex = 4;
+            this.checkBox_netchanges.Text = "Support Net Changes";
+            this.checkBox_netchanges.UseVisualStyleBackColor = true;
+            // 
+            // textBox_captureinstance
+            // 
+            this.textBox_captureinstance.Location = new System.Drawing.Point(118, 50);
+            this.textBox_captureinstance.Name = "textBox_captureinstance";
+            this.textBox_captureinstance.Size = new System.Drawing.Size(100, 20);
+            this.textBox_captureinstance.TabIndex = 3;
+            // 
+            // label_captureinstance
+            // 
+            this.label_captureinstance.AutoSize = true;
+            this.label_captureinstance.Location = new System.Drawing.Point(21, 57);
+            this.label_captureinstance.Name = "label_captureinstance";
+            this.label_captureinstance.Size = new System.Drawing.Size(88, 13);
+            this.label_captureinstance.TabIndex = 2;
+            this.label_captureinstance.Text = "Capture Instance";
+            // 
+            // textBox_rolename
+            // 
+            this.textBox_rolename.Location = new System.Drawing.Point(118, 24);
+            this.textBox_rolename.Name = "textBox_rolename";
+            this.textBox_rolename.Size = new System.Drawing.Size(100, 20);
+            this.textBox_rolename.TabIndex = 1;
+            // 
+            // label_rolename
+            // 
+            this.label_rolename.AutoSize = true;
+            this.label_rolename.Location = new System.Drawing.Point(45, 27);
+            this.label_rolename.Name = "label_rolename";
+            this.label_rolename.Size = new System.Drawing.Size(60, 13);
+            this.label_rolename.TabIndex = 0;
+            this.label_rolename.Text = "Role Name";
+            // 
+            // checkBox_allowpartitionswitch
+            // 
+            this.checkBox_allowpartitionswitch.AutoSize = true;
+            this.checkBox_allowpartitionswitch.Location = new System.Drawing.Point(251, 57);
+            this.checkBox_allowpartitionswitch.Name = "checkBox_allowpartitionswitch";
+            this.checkBox_allowpartitionswitch.Size = new System.Drawing.Size(127, 17);
+            this.checkBox_allowpartitionswitch.TabIndex = 11;
+            this.checkBox_allowpartitionswitch.Text = "Allow Partition Switch";
+            this.checkBox_allowpartitionswitch.UseVisualStyleBackColor = true;
+            // 
+            // button_Disablecdctable
+            // 
+            this.button_Disablecdctable.Location = new System.Drawing.Point(118, 176);
+            this.button_Disablecdctable.Name = "button_Disablecdctable";
+            this.button_Disablecdctable.Size = new System.Drawing.Size(75, 23);
+            this.button_Disablecdctable.TabIndex = 12;
+            this.button_Disablecdctable.Text = "Disable CDC";
+            this.button_Disablecdctable.UseVisualStyleBackColor = true;
+            this.button_Disablecdctable.Click += new System.EventHandler(this.button_Disablecdctable_Click);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(851, 520);
+            this.ClientSize = new System.Drawing.Size(1026, 602);
             this.Controls.Add(this.groupBox_cdctableoption);
-            this.Controls.Add(this.button_cdctable);
             this.Controls.Add(this.dataGridView_tables);
             this.Controls.Add(this.groupBox_SqlCon);
             this.Name = "Form1";
@@ -251,6 +378,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView_Databases)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView_tables)).EndInit();
             this.groupBox_cdctableoption.ResumeLayout(false);
+            this.groupBox_cdctableoption.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -274,7 +402,19 @@
         private System.Windows.Forms.DataGridView dataGridView_tables;
         private System.Windows.Forms.Button button_cdctable;
         private System.Windows.Forms.GroupBox groupBox_cdctableoption;
-        private System.Windows.Forms.CheckedListBox checkedListBox1;
+        private System.Windows.Forms.TextBox textBox_filegroupname;
+        private System.Windows.Forms.Label label_filegroup_name;
+        private System.Windows.Forms.TextBox textBox_capturedcollist;
+        private System.Windows.Forms.Label label_captured_column_list;
+        private System.Windows.Forms.TextBox textBox_indexname;
+        private System.Windows.Forms.Label label_indexname;
+        private System.Windows.Forms.CheckBox checkBox_netchanges;
+        private System.Windows.Forms.TextBox textBox_captureinstance;
+        private System.Windows.Forms.Label label_captureinstance;
+        private System.Windows.Forms.TextBox textBox_rolename;
+        private System.Windows.Forms.Label label_rolename;
+        private System.Windows.Forms.CheckBox checkBox_allowpartitionswitch;
+        private System.Windows.Forms.Button button_Disablecdctable;
 
     }
 }
