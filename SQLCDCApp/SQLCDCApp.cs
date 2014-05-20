@@ -41,9 +41,9 @@ namespace SQLCDCApp
                 _sqlcon.Open();
                 return _sqlcon;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw ex;
             }
         }
 
@@ -79,9 +79,9 @@ namespace SQLCDCApp
 
             return _listdatabases;
             }
-           catch(Exception) 
+           catch(Exception ex) 
             {
-               throw;
+               throw ex;
             }
            
             finally{
@@ -107,11 +107,11 @@ namespace SQLCDCApp
                 
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+               
 
-                throw;
+                throw ex;
             }
 
             finally { _Sqlcon.Close(); }
@@ -142,11 +142,11 @@ namespace SQLCDCApp
                 }
                 return true;
             }
-            catch(Exception)
+            catch(Exception ex)
             {
-                return false;
+               
 
-                throw;
+                throw ex;
             }
            
             
@@ -193,10 +193,10 @@ namespace SQLCDCApp
                 
                 return _listtables;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 
-                throw;
+                throw ex;
             }
 
             finally
@@ -209,14 +209,25 @@ namespace SQLCDCApp
         public string fn_EnableCDCOnTable(List<CDC> cdclist,bool Enable)
         {
             string QryEnableCdcOnTable = "";
+            string returnmsg = "";
             foreach (CDC cdcobj in cdclist)
             {
+
                 if (Enable)
                 {
-                    QryEnableCdcOnTable = "EXECUTE sys.sp_cdc_enable_table @source_schema = '" + cdcobj.source_schema + "' , @source_name = '" + cdcobj.source_name + "', @role_name = '" + cdcobj.role_name + "',";
+                    returnmsg = "CDC enabled on selected table.";
+                    QryEnableCdcOnTable = "EXECUTE sys.sp_cdc_enable_table @source_schema = '" + cdcobj.source_schema + "' , @source_name = '" + cdcobj.source_name + "',";
                 }else
                 {
+                    returnmsg = "CDC disabled on selected table.";
                     QryEnableCdcOnTable = "EXECUTE sys.sp_cdc_disable_table @source_schema = '" + cdcobj.source_schema + "' , @source_name = '" + cdcobj.source_name + "'";
+                }
+                if(!string.IsNullOrEmpty(cdcobj.role_name))
+                {
+                    QryEnableCdcOnTable+= " @role_name = '" + cdcobj.role_name + "',";
+                }else if(Enable)
+                {
+                    QryEnableCdcOnTable += " @role_name =NULL,";
                 }
                 if (!string.IsNullOrEmpty(cdcobj.capture_instance))
                 {
@@ -251,7 +262,8 @@ namespace SQLCDCApp
 
                 fn_ExecuteQuery(QryEnableCdcOnTable.Substring(0,QryEnableCdcOnTable.Length-1), cdcobj.Databasename);
             }
-            return "Work done";
+
+            return returnmsg;
         } 
 
         
@@ -269,18 +281,8 @@ namespace SQLCDCApp
 
     class CDC:Tables
     {
-        /*
-         [ @source_schema = ] 'source_schema', 
-  [ @source_name = ] 'source_name' ,
-  [,[ @capture_instance = ] 'capture_instance' ]
-  [,[ @supports_net_changes = ] supports_net_changes ]
-  , [ @role_name = ] 'role_name'
-  [,[ @index_name = ] 'index_name' ]
-  [,[ @captured_column_list = ] 'captured_column_list' ]
-  [,[ @filegroup_name = ] 'filegroup_name' ]
-  [,[ @allow_partition_switch = ] 'allow_partition_switch' ]
-  [;]
-         */
+      
+         
         public string source_schema { get; set; }
         public string source_name { get; set; }
         public string capture_instance { get; set; }

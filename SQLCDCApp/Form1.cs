@@ -34,7 +34,14 @@ namespace SQLCDCApp
         /// <param name="e"></param>
         private void button_connect_Click(object sender, EventArgs e)
         {
-           fn_ListDatabases();
+            try
+            {
+                fn_ListDatabases();
+            }
+            catch(Exception  ex)
+            {
+                MessageBox.Show(ex.Message.ToString(), "SQLCDCAPP Error");
+            }
         }
 
         private void comboBox_Authentication_SelectedIndexChanged(object sender, EventArgs e)
@@ -102,14 +109,21 @@ namespace SQLCDCApp
 
             }
 
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw ex;
             }
         }
         private void button_selectdb_Click(object sender, EventArgs e)
         {
-            MessageBox.Show(fn_ConfigureCDC(true).ToString());
+            try
+            {
+                MessageBox.Show(fn_ConfigureCDC(true).ToString());
+            }catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message.ToString(), "SQLCDCAPP Error");
+            }
+            
         }
 
         private string fn_ConfigureCDC(bool Enable)
@@ -179,21 +193,34 @@ namespace SQLCDCApp
                 return returnmsg;
                 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw ex;
             }
    
         }
         private void button_disablecdc_Click(object sender, EventArgs e)
         {
-            MessageBox.Show(fn_ConfigureCDC(false).ToString());
+            try
+            {
+                MessageBox.Show(fn_ConfigureCDC(false).ToString());
+            }catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message.ToString(),"SQLCDCAPP Error");
+            }
+
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-
-            fn_ListTables();
+            try
+            {
+                fn_ListTables();
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message.ToString(), "SQLCDCAPP Error");
+            }
         }
         
         private void fn_ListTables()
@@ -245,11 +272,11 @@ namespace SQLCDCApp
             SQLCDCApp scdc = new SQLCDCApp();
             List<CDC> cdclist = new List<CDC>();
 
-            if(string.IsNullOrEmpty(textBox_rolename.Text))
+            /*if(string.IsNullOrEmpty(textBox_rolename.Text))
             {
                 MessageBox.Show("Role Name can't be blank", "Information");
                 return;
-            }
+            }*/
 
            // CDC cdcobj = new CDC();
 
@@ -267,8 +294,8 @@ namespace SQLCDCApp
             {
                 CDC cdcobj = new CDC();
               
-                if(dgvr.Cells[4].Value.ToString()=="False")
-                {
+               // if(dgvr.Cells[4].Value.ToString()=="False")
+              //  {
                     cdcobj.Databasename = dgvr.Cells[1].Value.ToString().Trim();
                     cdcobj.source_schema = dgvr.Cells[2].Value.ToString().Trim();
                     cdcobj.source_name = dgvr.Cells[3].Value.ToString().Trim();
@@ -295,10 +322,10 @@ namespace SQLCDCApp
                     }
 
                     cdclist.Add(cdcobj);
-                }
+               // }
             }
 
-            MessageBox.Show(scdc.fn_EnableCDCOnTable(cdclist,true).ToString());
+            MessageBox.Show(scdc.fn_EnableCDCOnTable(cdclist,true).ToString(),"SQLCDCAPP Information");
             fn_ListTables();
         }
 
@@ -330,8 +357,18 @@ namespace SQLCDCApp
                 }
             }
 
-            MessageBox.Show(scdc.fn_EnableCDCOnTable(cdclist, false).ToString());
+            MessageBox.Show(scdc.fn_EnableCDCOnTable(cdclist, false).ToString(), "SQLCDCAPP Information");
             fn_ListTables();
+        }
+
+        private void groupBox1_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+
         }
 
        
