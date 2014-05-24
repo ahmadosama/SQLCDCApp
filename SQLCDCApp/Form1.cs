@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -22,6 +23,7 @@ namespace SQLCDCApp
             comboBox_Authentication.SelectedIndex = 0;
             textBox_User.Enabled = false;
             textBox_password.Enabled = false;
+            
         }
 
       
@@ -37,9 +39,13 @@ namespace SQLCDCApp
             try
             {
                 fn_ListDatabases();
+                button_EnableCDCDB.Enabled = true;
+                button_disablecdc.Enabled = true;
+                button_getables.Enabled = true;
             }
             catch(Exception  ex)
             {
+                
                 MessageBox.Show(ex.Message.ToString(), "SQLCDCAPP Error");
             }
         }
@@ -118,7 +124,11 @@ namespace SQLCDCApp
         {
             try
             {
-                MessageBox.Show(fn_ConfigureCDC(true).ToString());
+                string returnmsg = fn_ConfigureCDC(true);
+                if(!string.IsNullOrEmpty(returnmsg))
+                {
+                    MessageBox.Show(returnmsg,"SQLCDCApp Information");
+                }
             }catch(Exception ex)
             {
                 MessageBox.Show(ex.Message.ToString(), "SQLCDCAPP Error");
@@ -132,9 +142,10 @@ namespace SQLCDCApp
             List<DataGridViewRow> rows_with_checked_column = new List<DataGridViewRow>();
             List<string> lstdbcdc = new List<string>();
             SQLCDCApp obj = new SQLCDCApp();
-            
+            string msgoutput="", returnmsg="";
             try
             {
+
                 foreach (DataGridViewRow row in dataGridView_Databases.Rows)
                 {
                     if (Convert.ToBoolean(row.Cells[0].Value) == true)
@@ -143,12 +154,19 @@ namespace SQLCDCApp
                     }
                 }
 
+                if (rows_with_checked_column.Count == 0)
+                {
+                    returnmsg = "Please select a database.";
+                    return returnmsg;
+                }
+
+
+
                
-                string msgoutput,returnmsg;
                 bool output = false;
                 if (Enable)
                 {
-                    returnmsg = "CDC Enabled on selected Databases!!!";
+                    
                     foreach (DataGridViewRow dgvr in rows_with_checked_column)
                     {
 
@@ -163,11 +181,13 @@ namespace SQLCDCApp
                     if (msgoutput == "Yes")
                     {
                         output = obj.fn_ConfigureCDC(lstdbcdc, true);
+                        returnmsg = "CDC Enabled on selected Databases!!!";
+
                     }
                 }
                 else
                 {
-                    returnmsg = "CDC Disabled on selected Databases!!!";
+                    
                     foreach (DataGridViewRow dgvr in rows_with_checked_column)
                     {
 
@@ -182,11 +202,13 @@ namespace SQLCDCApp
                     if (msgoutput == "Yes")
                     {
                         output = obj.fn_ConfigureCDC(lstdbcdc, false);
+                        returnmsg = "CDC Disabled on selected Databases!!!";
                     }
                 }
 
                 if(output==true)
                 {
+                   
                     fn_ListDatabases();
                 }
 
@@ -203,12 +225,18 @@ namespace SQLCDCApp
         {
             try
             {
-                MessageBox.Show(fn_ConfigureCDC(false).ToString());
-            }catch(Exception ex)
-            {
-                MessageBox.Show(ex.Message.ToString(),"SQLCDCAPP Error");
+                string returnmsg = fn_ConfigureCDC(false);
+                if (!string.IsNullOrEmpty(returnmsg))
+                {
+                    MessageBox.Show(returnmsg, "SQLCDCApp Information");
+                }
             }
-
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message.ToString(), "SQLCDCAPP Error");
+            }
+            
+            
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -216,6 +244,9 @@ namespace SQLCDCApp
             try
             {
                 fn_ListTables();
+                button_enabletablecdc.Enabled = true;
+                button_Disablecdctable.Enabled = true;
+                button_getchangeddata.Enabled = true;
             }
             catch(Exception ex)
             {
@@ -272,16 +303,9 @@ namespace SQLCDCApp
             SQLCDCApp scdc = new SQLCDCApp();
             List<CDC> cdclist = new List<CDC>();
 
-            /*if(string.IsNullOrEmpty(textBox_rolename.Text))
-            {
-                MessageBox.Show("Role Name can't be blank", "Information");
-                return;
-            }*/
-
-           // CDC cdcobj = new CDC();
-
+            
             List<DataGridViewRow> rows_with_checked_column = new List<DataGridViewRow>();
-
+            
             foreach (DataGridViewRow row in dataGridView_tables.Rows)
             {
                 if (Convert.ToBoolean(row.Cells[0].Value) == true)
@@ -289,6 +313,13 @@ namespace SQLCDCApp
                     rows_with_checked_column.Add(row);
                 }
             }
+
+            if (rows_with_checked_column.Count == 0)
+            {
+                MessageBox.Show("Please select a table.", "SQLCDCApp Information");
+                return;
+            }
+
 
             foreach (DataGridViewRow dgvr in rows_with_checked_column)
             {
@@ -335,6 +366,50 @@ namespace SQLCDCApp
             SQLCDCApp scdc = new SQLCDCApp();
             List<CDC> cdclist = new List<CDC>();
 
+            
+            foreach (DataGridViewRow row in dataGridView_tables.Rows)
+            {
+                if (Convert.ToBoolean(row.Cells[0].Value) == true)
+                {
+                    rows_with_checked_column.Add(row);
+                }
+            }
+
+            if (rows_with_checked_column.Count == 0)
+            {
+                MessageBox.Show("Please select a table.", "SQLCDCApp Information");
+                return;
+            }
+
+            foreach (DataGridViewRow dgvr in rows_with_checked_column)
+            {
+                CDC cdcobj = new CDC();
+
+                if (dgvr.Cells[4].Value.ToString() == "True")
+                {
+                    cdcobj.Databasename = dgvr.Cells[1].Value.ToString().Trim();
+                    cdcobj.source_schema = dgvr.Cells[2].Value.ToString().Trim();
+                    cdcobj.source_name = dgvr.Cells[3].Value.ToString().Trim();
+                    //cdcobj.capture_instance = textBox_captureinstance.Text.Trim();
+                    cdclist.Add(cdcobj);
+                }
+            }
+
+            MessageBox.Show(scdc.fn_EnableCDCOnTable(cdclist, false).ToString(), "SQLCDCAPP Information");
+            fn_ListTables();
+        }
+
+        private void groupBox1_Enter(object sender, EventArgs e)
+        {
+
+        }
+        
+        public List<CDC> fn_getselectedtables()
+        {
+            List<DataGridViewRow> rows_with_checked_column = new List<DataGridViewRow>();
+            SQLCDCApp scdc = new SQLCDCApp();
+            List<CDC> cdclist = new List<CDC>();
+
             foreach (DataGridViewRow row in dataGridView_tables.Rows)
             {
                 if (Convert.ToBoolean(row.Cells[0].Value) == true)
@@ -356,21 +431,46 @@ namespace SQLCDCApp
                     cdclist.Add(cdcobj);
                 }
             }
-
-            MessageBox.Show(scdc.fn_EnableCDCOnTable(cdclist, false).ToString(), "SQLCDCAPP Information");
-            fn_ListTables();
+            return cdclist;
         }
-
-        private void groupBox1_Enter(object sender, EventArgs e)
-        {
-
-        }
-
         private void button2_Click(object sender, EventArgs e)
         {
+            SQLCDCApp scdc = new SQLCDCApp();
+            List<DataGridViewRow> rows_with_checked_column = new List<DataGridViewRow>();
 
+            
+            foreach (DataGridViewRow row in dataGridView_tables.Rows)
+            {
+                if (Convert.ToBoolean(row.Cells[0].Value) == true)
+                {
+                    rows_with_checked_column.Add(row);
+                }
+            }
+
+            if (rows_with_checked_column.Count == 0)
+            {
+                MessageBox.Show("Please select a table.", "SQLCDCApp Information");
+                return;
+            }
+
+            if (rows_with_checked_column.Count > 1)
+            {
+                MessageBox.Show("Please select single table only.", "SQLCDCApp Information");
+                return;
+            }
+
+            List<CDC> cdclist = new List<CDC>();
+            cdclist = fn_getselectedtables();
+            List<string> lst = new List<string>();
+            lst = scdc.fn_CaptureInstance(cdclist);
+
+            Form nf = new CDCData(lst);
+            nf.ShowDialog();
+          
+           
         }
 
        
+ 
     }
 }

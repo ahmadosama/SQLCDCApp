@@ -6,7 +6,7 @@ using System.Data;
 using System.Data.Sql;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
-
+using Dapper;
 namespace SQLCDCApp
 {
     
@@ -16,7 +16,6 @@ namespace SQLCDCApp
     class SQLCDCApp
     {
 
-        
         //public bool connect { get; set; }
         public string DatabaseName { get; set; }
         public  string is_cdc_enabled { get; set; }
@@ -58,13 +57,15 @@ namespace SQLCDCApp
             List<SQLCDCApp> _listdatabases= new List<SQLCDCApp>();
             SqlConnection _Sqlcon = new SqlConnection();
             _Sqlcon = fn_ConnecttoSQL();
-           try
+            
+            
+            try
            {
                if (_Sqlcon.State.ToString() == "Closed")
             {
                 _Sqlcon.Open();
             }
-
+            
                SqlCommand SQLGetDatabases = new SqlCommand("Select name,is_cdc_enabled from sys.databases where database_id>4 and state_desc='Online' order by is_cdc_enabled desc ", _Sqlcon);
             SqlDataReader Datareader;
             Datareader=SQLGetDatabases.ExecuteReader();
@@ -103,7 +104,7 @@ namespace SQLCDCApp
 
                 _Sqlcon.ChangeDatabase(DatabaseName);
                 SqlCommand SqlCmd = new SqlCommand(sqlqry, _Sqlcon);
-                SqlCmd.ExecuteReader();
+                SqlCmd.ExecuteNonQuery();
                 
                 return true;
             }
@@ -117,6 +118,39 @@ namespace SQLCDCApp
             finally { _Sqlcon.Close(); }
         }
 
+        private DataTable fn_ExecuteReader(string sqlqry, string DatabaseName)
+        {
+            SqlConnection _Sqlcon = new SqlConnection();
+            SqlDataReader dr ;
+            //IENumerableExtensions ie;
+            _Sqlcon = fn_ConnecttoSQL();
+            try
+            {
+
+                if (_Sqlcon.State.ToString() == "Closed")
+                {
+                    _Sqlcon.Open();
+                }
+
+                
+                 _Sqlcon.ChangeDatabase(DatabaseName);
+                SqlCommand SqlCmd = new SqlCommand(sqlqry, _Sqlcon);
+                dr=SqlCmd.ExecuteReader();
+
+                var dt = new DataTable();
+                dt.Load(dr);
+             
+                return dt;
+                
+
+            }
+            catch (SqlException ex)
+            {
+                throw;
+            }
+
+          //  finally { _Sqlcon.Close(); }
+        }
         /// <summary>
         /// Enable CDC on selected databases
         /// </summary>
@@ -266,11 +300,138 @@ namespace SQLCDCApp
             return returnmsg;
         } 
 
-        
+        public List<string> fn_CaptureInstance(List<CDC> cdclist)
+        {
+            List<string> lst = new List<string>();
+            SqlConnection _Sqlcon = new SqlConnection();
+            SqlDataReader Datareader; 
+            _Sqlcon = fn_ConnecttoSQL();
+            try
+            {
+                if (_Sqlcon.State.ToString() == "Closed")
+                {
+                    _Sqlcon.Open();
+                }
+
+                foreach(CDC cdcobj in cdclist)
+                {
+                    _Sqlcon.ChangeDatabase(cdcobj.Databasename);
+                    string Qry= "Select capture_instance from cdc.change_tables where source_object_id=object_id('" + cdcobj.source_schema + "." + cdcobj.source_name + "')";
+                    SqlCommand sqlcmd = new SqlCommand(Qry, _Sqlcon);
+                    Datareader=sqlcmd.ExecuteReader();
+                    while (Datareader.Read())
+                    {
+                        lst.Add(Datareader[0].ToString());
+                    }
+                 
+                    lst.Add(cdcobj.Databasename);
+                    
+                }
+
+                return lst;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+
+            finally
+            {
+                _Sqlcon.Close();
+            }
+
+        }
+     
+        public DataTable fn_GetChangeData(int ChangeDataType,string Databasename,string captureinstance,DateTime starttime,DateTime endtime)
+        {
+            string msg = "Table doesn't supports net changes";
+            string _Qrygetalldata = "";
+            DataTable result = new DataTable(); ;
+            //DataRow drow = new DataRow()
+            // return all records
+             if(ChangeDataType==1)
+            {
+                // get all data
+
+                 _Qrygetalldata = "Declare @start_lsn binary(10), " +
+                                        "@end_lsn binary(10), " +
+                                        "@capture_instance varchar(100) " +
+                    //  "Select @capture_instance=capture_instance from cdc.change_tables where source_object_id=object_id('" + tablename + "')" +
+                                        "Set @start_lsn=sys.fn_cdc_get_min_lsn('" + captureinstance + "')" +
+                                        "set @end_lsn = sys.fn_cdc_get_max_lsn(); " +
+                                        "select *, CASE __$Operation When 1 THEN 'DELETE' WHEN  2 THEN 'INSERT' WHEN 3 THEN 'UPDATE BEFORE'  " +
+                                        "WHEN 4 THEN 'UPDATE AFTER'  END AS Operation " +
+                                        "from [cdc].[fn_cdc_get_all_changes_dbo_Department](@start_lsn,@end_lsn,'all'); ";
+
+               
+            }else 
+                 if(ChangeDataType == 2)
+                 {
+                     // check if it's enabled for net changes
+                     Int32 supports_net_changes=-1;
+                     string _sqlqry = "select supports_net_changes from cdc.change_tables where capture_instance='" + captureinstance + "'";
+                     DataTable dt = fn_ExecuteReader(_sqlqry, Databasename);
+                     for (int i = 0; i < dt.Rows.Count; i++)
+                     {
+                          supports_net_changes = Convert.ToInt32(dt.Rows[i]["supports_net_changes"]);
+                         
+                     }
+                     if (supports_net_changes == 0)
+                     {
+                         
+                         DataColumn col = new DataColumn("Message");
+                         col.DefaultValue = msg;
+                         DataRow drow = result.NewRow();
+                         result.Columns.Add(col);
+                         result.Rows.Add(drow);
+                         
+                     }else
+                         if(supports_net_changes>0)
+                         {
+                              _Qrygetalldata = "Declare @start_lsn binary(10), " +
+                                        "@end_lsn binary(10), " +
+                                        "@capture_instance varchar(100) " +
+                    //  "Select @capture_instance=capture_instance from cdc.change_tables where source_object_id=object_id('" + tablename + "')" +
+                                        "Set @start_lsn=sys.fn_cdc_get_min_lsn('" + captureinstance + "')" +
+                                        "set @end_lsn = sys.fn_cdc_get_max_lsn(); " +
+                                        "select *, CASE __$Operation When 1 THEN 'DELETE' WHEN  2 THEN 'INSERT' WHEN 3 THEN 'UPDATE BEFORE'  " +
+                                        "WHEN 4 THEN 'UPDATE AFTER'  END AS Operation " +
+                                        "from [cdc].[fn_cdc_get_net_changes_dbo_Department](@start_lsn,@end_lsn,'all'); ";
+                         }
+                         
+
+                 }else if(ChangeDataType==3)
+                 {
+                     _Qrygetalldata = "DECLARE @begin_time datetime, @end_time datetime, @start_lsn binary(10), @end_lsn binary(10); " +
+                                      "SET @begin_time = '" + starttime + "'" +
+                                      "SET @end_time ='" + endtime + "'" +
+                                      "SELECT @start_lsn = sys.fn_cdc_map_time_to_lsn('smallest greater than', @begin_time);" +
+                                      "SELECT @end_lsn = sys.fn_cdc_map_time_to_lsn('largest less than or equal', @end_time);"+
+                                      "select *, CASE __$Operation When 1 THEN 'DELETE'" +
+	                                  "WHEN  2 THEN 'INSERT'" +
+	                                  "WHEN 3 THEN 'UPDATE BEFORE'" +
+	                                  "WHEN 4 THEN 'UPDATE AFTER' END AS Operation"+
+                                      " from [cdc].[fn_cdc_get_all_changes_dbo_Department](@start_lsn,@end_lsn,'all')";
+                 }
+            
+
+
+            try
+            {
+                result = fn_ExecuteReader(_Qrygetalldata, Databasename);
+                return result;
+
+            }
+            catch(SqlException ex)
+            {
+                throw;
+            }
+              
+        }
     }
 
 
-    class Tables
+    public class Tables
     {
         public string Databasename { get; set; }
         public string schema { get; set; }
@@ -279,7 +440,7 @@ namespace SQLCDCApp
 
     }
 
-    class CDC:Tables
+   public class CDC:Tables
     {
       
          
@@ -297,4 +458,5 @@ namespace SQLCDCApp
 
 
     }
+
 }
