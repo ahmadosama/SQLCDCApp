@@ -117,7 +117,7 @@ namespace SQLCDCApp
 
             catch (Exception ex)
             {
-                throw ex;
+                throw;
             }
         }
         private void button_selectdb_Click(object sender, EventArgs e)

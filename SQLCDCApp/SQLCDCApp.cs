@@ -6,7 +6,7 @@ using System.Data;
 using System.Data.Sql;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
-using Dapper;
+
 namespace SQLCDCApp
 {
     
@@ -323,7 +323,8 @@ namespace SQLCDCApp
                     {
                         lst.Add(Datareader[0].ToString());
                     }
-                 
+
+                    lst.Add(cdcobj.source_schema + "_" + cdcobj.source_name);
                     lst.Add(cdcobj.Databasename);
                     
                 }
@@ -342,7 +343,7 @@ namespace SQLCDCApp
 
         }
      
-        public DataTable fn_GetChangeData(int ChangeDataType,string Databasename,string captureinstance,DateTime starttime,DateTime endtime)
+        public DataTable fn_GetChangeData(int ChangeDataType,string Databasename,string tablename,string captureinstance,DateTime starttime,DateTime endtime)
         {
             string msg = "Table doesn't supports net changes";
             string _Qrygetalldata = "";
@@ -361,7 +362,7 @@ namespace SQLCDCApp
                                         "set @end_lsn = sys.fn_cdc_get_max_lsn(); " +
                                         "select *, CASE __$Operation When 1 THEN 'DELETE' WHEN  2 THEN 'INSERT' WHEN 3 THEN 'UPDATE BEFORE'  " +
                                         "WHEN 4 THEN 'UPDATE AFTER'  END AS Operation " +
-                                        "from [cdc].[fn_cdc_get_all_changes_dbo_Department](@start_lsn,@end_lsn,'all'); ";
+                                        "from [cdc].[fn_cdc_get_all_changes_" +  tablename + "](@start_lsn,@end_lsn,'all'); ";
 
                
             }else 
@@ -396,7 +397,7 @@ namespace SQLCDCApp
                                         "set @end_lsn = sys.fn_cdc_get_max_lsn(); " +
                                         "select *, CASE __$Operation When 1 THEN 'DELETE' WHEN  2 THEN 'INSERT' WHEN 3 THEN 'UPDATE BEFORE'  " +
                                         "WHEN 4 THEN 'UPDATE AFTER'  END AS Operation " +
-                                        "from [cdc].[fn_cdc_get_net_changes_dbo_Department](@start_lsn,@end_lsn,'all'); ";
+                                        "from [cdc].[fn_cdc_get_all_changes_" + tablename + "](@start_lsn,@end_lsn,'all'); ";
                          }
                          
 
@@ -411,7 +412,7 @@ namespace SQLCDCApp
 	                                  "WHEN  2 THEN 'INSERT'" +
 	                                  "WHEN 3 THEN 'UPDATE BEFORE'" +
 	                                  "WHEN 4 THEN 'UPDATE AFTER' END AS Operation"+
-                                      " from [cdc].[fn_cdc_get_all_changes_dbo_Department](@start_lsn,@end_lsn,'all')";
+                                      " from [cdc].[fn_cdc_get_all_changes_" + tablename + "](@start_lsn,@end_lsn,'all')";
                  }
             
 
