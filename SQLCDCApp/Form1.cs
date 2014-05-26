@@ -339,7 +339,7 @@ namespace SQLCDCApp
                     {
                         cdcobj.supports_net_changes=1;
                     }
-                    else
+                    if (checkBox_netchanges.Checked == false)
                     {
                         cdcobj.supports_net_changes = 0;
                     }
@@ -347,13 +347,13 @@ namespace SQLCDCApp
                     {
                         cdcobj.allow_partition_switch = 1;
                     }
-                    else
+                    if (checkBox_allowpartitionswitch.Checked == false)
                     {
                         cdcobj.allow_partition_switch = 0;
                     }
 
                     cdclist.Add(cdcobj);
-               // }
+               
             }
 
             MessageBox.Show(scdc.fn_EnableCDCOnTable(cdclist,true).ToString(),"SQLCDCAPP Information");

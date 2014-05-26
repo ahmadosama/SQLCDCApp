@@ -420,6 +420,7 @@ namespace SQLCDCApp
             try
             {
                 result = fn_ExecuteReader(_Qrygetalldata, Databasename);
+                
                 return result;
 
             }
@@ -428,6 +429,104 @@ namespace SQLCDCApp
                 throw;
             }
               
+        }
+
+        public void fn_ExportToDB(DataTable srctable,string desttable,bool createtable,string DestDatabase)
+        {
+            try
+            {
+                // create destination table if doesn't exists
+                if(createtable)
+                {
+                    string sql = "CREATE TABLE [" + desttable + "] (";
+                    // columns
+                    foreach (DataColumn column in srctable.Columns)
+                    {
+                        sql += "[" + column.ColumnName + "] " + SQLGetType(column) + ",";
+                    }
+                    sql = sql.Substring(0,sql.Length-1) + ")";
+
+                    fn_ExecuteQuery(sql, DestDatabase);
+
+                }
+
+
+                // bulk copy srctable into sql server
+                SqlConnection _Sqlcon = fn_ConnecttoSQL();
+                _Sqlcon.ChangeDatabase(DestDatabase);
+                using (SqlBulkCopy sbc = new SqlBulkCopy(_Sqlcon))
+                    {
+                        sbc.DestinationTableName=desttable;
+                        foreach (var column in srctable.Columns)
+                            sbc.ColumnMappings.Add(column.ToString(), column.ToString());
+                        sbc.WriteToServer(srctable);
+                    }
+                
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+
+     
+
+        public static string SQLGetType(object type, int columnSize, int numericPrecision, int numericScale)
+        {
+            switch (type.ToString())
+            {
+                case "System.String":
+                    return "VARCHAR(" + ((columnSize == -1) ? "255" : (columnSize > 8000) ? "MAX" : columnSize.ToString()) + ")";
+
+                case "System.Decimal":
+                    if (numericScale > 0)
+                        return "REAL";
+                    else if (numericPrecision > 10)
+                        return "BIGINT";
+                    else
+                        return "INT";
+
+                case "System.Double":
+                case "System.Single":
+                    return "REAL";
+
+                case "System.Int64":
+                    return "BIGINT";
+
+                case "System.Int16":
+                case "System.Int32":
+                    return "INT";
+
+                case "System.DateTime":
+                    return "DATETIME";
+
+                case "System.Boolean":
+                    return "BIT";
+
+                case "System.Byte":
+                    return "TINYINT";
+
+                case "System.Guid":
+                    return "UNIQUEIDENTIFIER";
+
+                default:
+                    throw new Exception(type.ToString() + " not implemented.");
+            }
+        }
+
+        // Overload based on row from schema table
+        public static string SQLGetType(DataRow schemaRow)
+        {
+            return SQLGetType(schemaRow["DataType"],
+                                int.Parse(schemaRow["ColumnSize"].ToString()),
+                                int.Parse(schemaRow["NumericPrecision"].ToString()),
+                                int.Parse(schemaRow["NumericScale"].ToString()));
+        }
+        // Overload based on DataColumn from DataTable type
+        public static string SQLGetType(DataColumn column)
+        {
+            return SQLGetType(column.DataType, column.MaxLength, 10, 2);
         }
     }
 
