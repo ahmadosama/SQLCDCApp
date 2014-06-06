@@ -10,16 +10,18 @@ using System.Threading.Tasks;
 namespace SQLCDCApp
 {
     
-    /// <summary>
-    /// Main logic is here
-    /// </summary>
+ 
     class SQLCDCApp
     {
 
-        //public bool connect { get; set; }
         public string DatabaseName { get; set; }
         public  string is_cdc_enabled { get; set; }
-       
+  
+        
+        /// <summary>
+        /// returns a sql connection
+        /// </summary>
+        /// <returns></returns>
         public SqlConnection fn_ConnecttoSQL()
         {
            
@@ -40,9 +42,9 @@ namespace SQLCDCApp
                 _sqlcon.Open();
                 return _sqlcon;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw ex;
+                throw;
             }
         }
 
@@ -51,45 +53,30 @@ namespace SQLCDCApp
         /// returns true when successfull
         /// </summary>
         /// <returns></returns>
-        
-        public List<SQLCDCApp> fn_GetDatabases()
+        public DataTable fn_GetDatabases()
         {
-            List<SQLCDCApp> _listdatabases= new List<SQLCDCApp>();
-            SqlConnection _Sqlcon = new SqlConnection();
-            _Sqlcon = fn_ConnecttoSQL();
-            
             
             try
-           {
-               if (_Sqlcon.State.ToString() == "Closed")
             {
-                _Sqlcon.Open();
+                DataTable dtdbs = fn_ExecuteReader("Select name,CASE is_cdc_enabled WHEN 0 Then 'False' WHEN 1 THEN 'True' END AS is_cdc_enabled from sys.databases where database_id>4 " +
+                "and state_desc='Online' order by is_cdc_enabled desc ", "master");
+                return dtdbs;
             }
             
-               SqlCommand SQLGetDatabases = new SqlCommand("Select name,is_cdc_enabled from sys.databases where database_id>4 and state_desc='Online' order by is_cdc_enabled desc ", _Sqlcon);
-            SqlDataReader Datareader;
-            Datareader=SQLGetDatabases.ExecuteReader();
-            while(Datareader.Read())
+           catch(Exception) 
             {
-                SQLCDCApp obj = new SQLCDCApp();
-                obj.DatabaseName = Datareader[0].ToString();
-                obj.is_cdc_enabled = Datareader[1].ToString();
-                //obj.state = Datareader[2].ToString();
-                _listdatabases.Add(obj);
-            }
-
-            return _listdatabases;
-            }
-           catch(Exception ex) 
-            {
-               throw ex;
+               throw;
             }
            
-            finally{
-                _Sqlcon.Close();
-            }
+           
         }
         
+        /// <summary>
+        /// execute non query
+        /// </summary>
+        /// <param name="sqlqry"></param>
+        /// <param name="DatabaseName"></param>
+        /// <returns></returns>
         private bool fn_ExecuteQuery(string sqlqry,string DatabaseName)
         {
             SqlConnection _Sqlcon = new SqlConnection();
@@ -108,16 +95,22 @@ namespace SQLCDCApp
                 
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                
 
-                throw ex;
+                throw;
             }
 
             finally { _Sqlcon.Close(); }
         }
 
+        /// <summary>
+        /// executes a query and returns a datatable
+        /// </summary>
+        /// <param name="sqlqry"></param>
+        /// <param name="DatabaseName"></param>
+        /// <returns></returns>
         private DataTable fn_ExecuteReader(string sqlqry, string DatabaseName)
         {
             SqlConnection _Sqlcon = new SqlConnection();
@@ -133,7 +126,7 @@ namespace SQLCDCApp
                 }
 
                 
-                 _Sqlcon.ChangeDatabase(DatabaseName);
+                _Sqlcon.ChangeDatabase(DatabaseName);
                 SqlCommand SqlCmd = new SqlCommand(sqlqry, _Sqlcon);
                 dr=SqlCmd.ExecuteReader();
 
@@ -151,6 +144,7 @@ namespace SQLCDCApp
 
           //  finally { _Sqlcon.Close(); }
         }
+        
         /// <summary>
         /// Enable CDC on selected databases
         /// </summary>
@@ -176,11 +170,11 @@ namespace SQLCDCApp
                 }
                 return true;
             }
-            catch(Exception ex)
+            catch(Exception)
             {
                
 
-                throw ex;
+                throw;
             }
            
             
@@ -191,115 +185,118 @@ namespace SQLCDCApp
         /// marks them as cdc enabled or not.
         /// </summary>
         /// <returns></returns>
-        public List<Tables> fn_GetTables(List<string> Dblist)
+        public DataSet fn_GetTables(List<string> Dblist)
         {
             
-            List<Tables> _listtables = new List<Tables>();
-            SqlConnection _Sqlcon = new SqlConnection();
-            SqlDataReader Datareader;
-            _Sqlcon = fn_ConnecttoSQL();
+           
             try
             {
-                if (_Sqlcon.State.ToString() == "Closed")
-                {
-                    _Sqlcon.Open();
-                }
-
+               
+                DataSet ds = new DataSet();
                 foreach (string db in Dblist)
                 {
-                    _Sqlcon.ChangeDatabase(db);
-                    string Qrygettables = "Select '" + db + "',[schemaname]=ss.name,st.name,is_tracked_by_cdc from sys.Tables st  " +
-                        "join sys.schemas ss on st.schema_id=ss.schema_id order by name";
-                    SqlCommand SQLGetDatabases = new SqlCommand(Qrygettables, _Sqlcon);
-                    
-                    Datareader = SQLGetDatabases.ExecuteReader();
-                    while (Datareader.Read())
-                    {
-                        Tables _tb = new Tables();
-                        _tb.Databasename = Datareader[0].ToString();
-                        _tb.schema = Datareader[1].ToString();
-                       _tb.name = Datareader[2].ToString();
-                       _tb.is_tracked_by_cdc = Datareader[3].ToString();
-                        _listtables.Add(_tb);
-                    }
-                    Datareader.Close();
+                       
+                    DataTable dttbist = new DataTable();
+                    string Qrygettables = " Select '" + db + "' AS DatabaseName,[schemaname]=ss.name,st.name, " +
+                    "Case is_tracked_by_cdc WHEN 0 THEN 'False' WHEN 1 THEN 'True' END As is_tracked_by_cdc  " + 
+                        " from sys.Tables st  " +
+                        "  join sys.schemas ss on st.schema_id=ss.schema_id order by name";
+                    dttbist = fn_ExecuteReader(Qrygettables, db);
+                    ds.Tables.Add(dttbist); 
                 }
                 
-                return _listtables;
+                return ds;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 
-                throw ex;
+                throw;
             }
 
-            finally
+        
+        }
+        
+        /// <summary>
+        /// enables cdc on a table
+        /// </summary>
+        /// <param name="cdclist"></param>
+        /// <param name="Enable"></param>
+        /// <returns></returns>
+        public string fn_EnableCDCOnTable(List<CDC> cdclist, bool Enable)
+        {
+
+            string QryEnableCdcOnTable = "";
+            string returnmsg = "";
+            try
             {
-                
-                _Sqlcon.Close();
+                foreach (CDC cdcobj in cdclist)
+                {
+
+                    if (Enable)
+                    {
+                        returnmsg = "CDC enabled on selected table.";
+                        QryEnableCdcOnTable = "EXECUTE sys.sp_cdc_enable_table @source_schema = '" + cdcobj.source_schema + "' , @source_name = '" + cdcobj.source_name + "',";
+                    }
+                    else
+                    {
+                        returnmsg = "CDC disabled on selected table.";
+                        QryEnableCdcOnTable = "EXECUTE sys.sp_cdc_disable_table @source_schema = '" + cdcobj.source_schema + "' , @source_name = '" + cdcobj.source_name + "'";
+                    }
+                    if (!string.IsNullOrEmpty(cdcobj.role_name))
+                    {
+                        QryEnableCdcOnTable += " @role_name = '" + cdcobj.role_name + "',";
+                    }
+                    else if (Enable)
+                    {
+                        QryEnableCdcOnTable += " @role_name =NULL,";
+                    }
+                    if (!string.IsNullOrEmpty(cdcobj.capture_instance))
+                    {
+                        QryEnableCdcOnTable = QryEnableCdcOnTable + " @capture_instance='" + cdcobj.capture_instance + "',";
+                    }
+                    else if (string.IsNullOrEmpty(cdcobj.capture_instance) && Enable == false)
+                    {
+                        QryEnableCdcOnTable = QryEnableCdcOnTable + " ,@capture_instance='all',";
+                    }
+                    if (!string.IsNullOrEmpty(cdcobj.index_name))
+                    {
+                        QryEnableCdcOnTable = QryEnableCdcOnTable + " @index_name='" + cdcobj.index_name + "',";
+                    }
+
+                    if (!string.IsNullOrEmpty(cdcobj.captured_column_list))
+                    {
+                        QryEnableCdcOnTable = QryEnableCdcOnTable + " @captured_column_list='" + cdcobj.captured_column_list + "',";
+                    }
+
+                    if (!string.IsNullOrEmpty(cdcobj.filegroup_name))
+                    {
+                        QryEnableCdcOnTable = QryEnableCdcOnTable + " @filegroup_name='" + cdcobj.filegroup_name + "',";
+                    }
+
+                    if (cdcobj.supports_net_changes == 1)
+                    {
+                        QryEnableCdcOnTable = QryEnableCdcOnTable + " @supports_net_changes='" + cdcobj.supports_net_changes + "',";
+                    }
+                    if (cdcobj.allow_partition_switch == 1)
+                    {
+                        QryEnableCdcOnTable = QryEnableCdcOnTable + " @allow_partition_switch='" + cdcobj.allow_partition_switch + "',";
+                    }
+
+                    fn_ExecuteQuery(QryEnableCdcOnTable.Substring(0, QryEnableCdcOnTable.Length - 1), cdcobj.Databasename);
+                }
+
+                return returnmsg;
+            }catch(Exception)
+            {
+                throw;
             }
         }
 
-        public string fn_EnableCDCOnTable(List<CDC> cdclist,bool Enable)
-        {
-            string QryEnableCdcOnTable = "";
-            string returnmsg = "";
-            foreach (CDC cdcobj in cdclist)
-            {
-
-                if (Enable)
-                {
-                    returnmsg = "CDC enabled on selected table.";
-                    QryEnableCdcOnTable = "EXECUTE sys.sp_cdc_enable_table @source_schema = '" + cdcobj.source_schema + "' , @source_name = '" + cdcobj.source_name + "',";
-                }else
-                {
-                    returnmsg = "CDC disabled on selected table.";
-                    QryEnableCdcOnTable = "EXECUTE sys.sp_cdc_disable_table @source_schema = '" + cdcobj.source_schema + "' , @source_name = '" + cdcobj.source_name + "'";
-                }
-                if(!string.IsNullOrEmpty(cdcobj.role_name))
-                {
-                    QryEnableCdcOnTable+= " @role_name = '" + cdcobj.role_name + "',";
-                }else if(Enable)
-                {
-                    QryEnableCdcOnTable += " @role_name =NULL,";
-                }
-                if (!string.IsNullOrEmpty(cdcobj.capture_instance))
-                {
-                    QryEnableCdcOnTable = QryEnableCdcOnTable + " @capture_instance='" + cdcobj.capture_instance + "',";
-                }else if(string.IsNullOrEmpty(cdcobj.capture_instance) && Enable==false)
-                {
-                    QryEnableCdcOnTable = QryEnableCdcOnTable + " ,@capture_instance='all',";
-                }
-                if (!string.IsNullOrEmpty(cdcobj.index_name))
-                {
-                    QryEnableCdcOnTable = QryEnableCdcOnTable + " @index_name='" + cdcobj.index_name + "',";
-                }
-
-                if (!string.IsNullOrEmpty(cdcobj.captured_column_list))
-                {
-                    QryEnableCdcOnTable = QryEnableCdcOnTable + " @captured_column_list='" + cdcobj.captured_column_list + "',";
-                }
-
-                if (!string.IsNullOrEmpty(cdcobj.filegroup_name))
-                {
-                    QryEnableCdcOnTable = QryEnableCdcOnTable + " @filegroup_name='" + cdcobj.filegroup_name + "',";
-                }
-            
-                if (cdcobj.supports_net_changes == 1)
-                {
-                    QryEnableCdcOnTable = QryEnableCdcOnTable + " @supports_net_changes='" + cdcobj.supports_net_changes + "',";
-                }
-                if (cdcobj.allow_partition_switch == 1)
-                {
-                    QryEnableCdcOnTable = QryEnableCdcOnTable + " @allow_partition_switch='" + cdcobj.allow_partition_switch + "',";
-                }
-
-                fn_ExecuteQuery(QryEnableCdcOnTable.Substring(0,QryEnableCdcOnTable.Length-1), cdcobj.Databasename);
-            }
-
-            return returnmsg;
-        } 
-
+        /// <summary>
+        /// returns cdc captureinstance 
+        /// </summary>
+        /// <param name="cdclist"></param>
+        /// <returns></returns>
         public List<string> fn_CaptureInstance(List<CDC> cdclist)
         {
             List<string> lst = new List<string>();
@@ -331,9 +328,9 @@ namespace SQLCDCApp
 
                 return lst;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw ex;
+                throw;
             }
 
             finally
@@ -342,14 +339,24 @@ namespace SQLCDCApp
             }
 
         }
-     
+        
+        /// <summary>
+        /// returns change data
+        /// </summary>
+        /// <param name="ChangeDataType"></param>
+        /// <param name="Databasename"></param>
+        /// <param name="tablename"></param>
+        /// <param name="captureinstance"></param>
+        /// <param name="starttime"></param>
+        /// <param name="endtime"></param>
+        /// <returns></returns>
         public DataTable fn_GetChangeData(int ChangeDataType,string Databasename,string tablename,string captureinstance,DateTime starttime,DateTime endtime)
         {
             string msg = "Table doesn't supports net changes";
             string _Qrygetalldata = "";
             DataTable result = new DataTable(); ;
-            //DataRow drow = new DataRow()
-            // return all records
+            
+            
              if(ChangeDataType==1)
             {
                 // get all data
@@ -357,7 +364,7 @@ namespace SQLCDCApp
                  _Qrygetalldata = "Declare @start_lsn binary(10), " +
                                         "@end_lsn binary(10), " +
                                         "@capture_instance varchar(100) " +
-                    //  "Select @capture_instance=capture_instance from cdc.change_tables where source_object_id=object_id('" + tablename + "')" +
+           
                                         "Set @start_lsn=sys.fn_cdc_get_min_lsn('" + captureinstance + "')" +
                                         "set @end_lsn = sys.fn_cdc_get_max_lsn(); " +
                                         "select *, CASE __$Operation When 1 THEN 'DELETE' WHEN  2 THEN 'INSERT' WHEN 3 THEN 'UPDATE BEFORE'  " +
@@ -392,31 +399,28 @@ namespace SQLCDCApp
                               _Qrygetalldata = "Declare @start_lsn binary(10), " +
                                         "@end_lsn binary(10), " +
                                         "@capture_instance varchar(100) " +
-                    //  "Select @capture_instance=capture_instance from cdc.change_tables where source_object_id=object_id('" + tablename + "')" +
                                         "Set @start_lsn=sys.fn_cdc_get_min_lsn('" + captureinstance + "')" +
                                         "set @end_lsn = sys.fn_cdc_get_max_lsn(); " +
                                         "select *, CASE __$Operation When 1 THEN 'DELETE' WHEN  2 THEN 'INSERT' WHEN 3 THEN 'UPDATE BEFORE'  " +
                                         "WHEN 4 THEN 'UPDATE AFTER'  END AS Operation " +
-                                        "from [cdc].[fn_cdc_get_all_changes_" + tablename + "](@start_lsn,@end_lsn,'all'); ";
+                                        "from [cdc].[fn_cdc_get_net_changes_" + tablename + "](@start_lsn,@end_lsn,'all'); ";
                          }
-                         
 
-                 }else if(ChangeDataType==3)
+
+                 }
+                 else if (ChangeDataType == 3)
                  {
                      _Qrygetalldata = "DECLARE @begin_time datetime, @end_time datetime, @start_lsn binary(10), @end_lsn binary(10); " +
                                       "SET @begin_time = '" + starttime + "'" +
                                       "SET @end_time ='" + endtime + "'" +
                                       "SELECT @start_lsn = sys.fn_cdc_map_time_to_lsn('smallest greater than', @begin_time);" +
-                                      "SELECT @end_lsn = sys.fn_cdc_map_time_to_lsn('largest less than or equal', @end_time);"+
+                                      "SELECT @end_lsn = sys.fn_cdc_map_time_to_lsn('largest less than or equal', @end_time);" +
                                       "select *, CASE __$Operation When 1 THEN 'DELETE'" +
-	                                  "WHEN  2 THEN 'INSERT'" +
-	                                  "WHEN 3 THEN 'UPDATE BEFORE'" +
-	                                  "WHEN 4 THEN 'UPDATE AFTER' END AS Operation"+
+                                      "WHEN  2 THEN 'INSERT'" +
+                                      "WHEN 3 THEN 'UPDATE BEFORE'" +
+                                      "WHEN 4 THEN 'UPDATE AFTER' END AS Operation" +
                                       " from [cdc].[fn_cdc_get_all_changes_" + tablename + "](@start_lsn,@end_lsn,'all')";
                  }
-            
-
-
             try
             {
                 result = fn_ExecuteReader(_Qrygetalldata, Databasename);
@@ -424,40 +428,77 @@ namespace SQLCDCApp
                 return result;
 
             }
-            catch(SqlException ex)
+            catch(SqlException)
             {
                 throw;
             }
               
         }
 
+        /// <summary>
+        /// create destination table
+        /// export data to destination table
+        /// prepare meta data table for job schedule
+        /// </summary>
+        /// <param name="srctable"></param>
+        /// <param name="desttable"></param>
+        /// <param name="createtable"></param>
+        /// <param name="DestDatabase"></param>
         public void fn_ExportToDB(DataTable srctable,string desttable,bool createtable,string DestDatabase)
         {
+            DataTable tmpsrctable = srctable;
+            if (tmpsrctable.Columns.Contains("__$start_lsn") == true)
+            { 
+                tmpsrctable.Columns.Remove("__$start_lsn");
+            }
+            if (tmpsrctable.Columns.Contains("__$seqval") == true)
+            {
+                tmpsrctable.Columns.Remove("__$seqval");
+            }
+            if (tmpsrctable.Columns.Contains("__$operation") == true)
+            {
+                tmpsrctable.Columns.Remove("__$operation");
+            }
+            if (tmpsrctable.Columns.Contains("__$update_mask") == true)
+            {
+                tmpsrctable.Columns.Remove("__$update_mask");
+            }
+         
+                
             try
             {
+                
+
+                
+                
+
                 // create destination table if doesn't exists
                 if(createtable)
                 {
                     string sql = "CREATE TABLE [" + desttable + "] (";
                     // columns
-                    foreach (DataColumn column in srctable.Columns)
+                    foreach (DataColumn column in tmpsrctable.Columns)
                     {
+                        //if (column.ColumnName != "__$start_lsn" && column.ColumnName != "__$seqval" && column.ColumnName != "__$operation" && column.ColumnName != "__$update_mask")
                         sql += "[" + column.ColumnName + "] " + SQLGetType(column) + ",";
                     }
-                    sql = sql.Substring(0,sql.Length-1) + ")";
+                    sql = sql + " DateLastUpdated Datetime default(getdate()))";
+                    //sql = sql.Substring(0,sql.Length-1) + ")";
 
                     fn_ExecuteQuery(sql, DestDatabase);
 
                 }
 
-
+               
                 // bulk copy srctable into sql server
                 SqlConnection _Sqlcon = fn_ConnecttoSQL();
                 _Sqlcon.ChangeDatabase(DestDatabase);
+                //_Sqlcon.BeginTransaction("CDCDataExport");
+                
                 using (SqlBulkCopy sbc = new SqlBulkCopy(_Sqlcon))
                     {
                         sbc.DestinationTableName=desttable;
-                        foreach (var column in srctable.Columns)
+                        foreach (var column in tmpsrctable.Columns)
                             sbc.ColumnMappings.Add(column.ToString(), column.ToString());
                         sbc.WriteToServer(srctable);
                     }
@@ -469,9 +510,14 @@ namespace SQLCDCApp
             }
         }
 
-
-     
-
+        /// <summary>
+        /// maps .net datatype to sql datatype
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="columnSize"></param>
+        /// <param name="numericPrecision"></param>
+        /// <param name="numericScale"></param>
+        /// <returns></returns>
         public static string SQLGetType(object type, int columnSize, int numericPrecision, int numericScale)
         {
             switch (type.ToString())
@@ -515,7 +561,11 @@ namespace SQLCDCApp
             }
         }
 
-        // Overload based on row from schema table
+        /// <summary>
+        /// Overload based on row from schema table
+        /// </summary>
+        /// <param name="schemaRow"></param>
+        /// <returns></returns>
         public static string SQLGetType(DataRow schemaRow)
         {
             return SQLGetType(schemaRow["DataType"],
@@ -523,15 +573,59 @@ namespace SQLCDCApp
                                 int.Parse(schemaRow["NumericPrecision"].ToString()),
                                 int.Parse(schemaRow["NumericScale"].ToString()));
         }
-        // Overload based on DataColumn from DataTable type
+        
+        /// <summary>
+        /// // Overload based on DataColumn from DataTable type
+        /// </summary>
+        /// <param name="column"></param>
+        /// <returns></returns>
         public static string SQLGetType(DataColumn column)
         {
             return SQLGetType(column.DataType, column.MaxLength, 10, 2);
         }
+
+        public void fn_CreateMetaTables(string srcserver, string destserver,string srcdb,string destdb,string srctable,string desttable,string captureinstance)
+        {
+            string _sqlqrycreatetable ="if not exists(select 1 from sys.schemas where name ='sqlcdcapp')"+
+            " BEGIN " +
+	        " EXEC('CREATE SCHEMA sqlcdcapp authorization dbo') " +
+            " END " + 
+            " if (object_id('sqlcdcapp.connection_details')) is null " +
+            " BEGIN " +
+            " CREATE TABLE sqlcdcapp.connection_details ( " +
+            " Cnid int identity Primary Key,srcserver varchar(50), destserver varchar(50), srcdb varchar(50), " +
+            " destdb varchar(50), srctable varchar(100), desttable varchar(100)) END ";
+
+            _sqlqrycreatetable = _sqlqrycreatetable + System.Environment.NewLine +" if (object_id('sqlcdcapp.IDLoad')) is null  " +
+            " BEGIN " +
+            " Create table sqlcdcapp.IDLoad (" +
+            " sd_id int identity Primary Key,  cnid int, captureinstance varchar(100),recordcount int, srclaststartlsn nvarchar(42), " +
+            " srclastsyncdate datetime,srcsynclogin varchar(100)) end ";
+
+            string _sqlqrygetmaxlsn = " DECLARE @start_lsn BINARY(10),@end_lsn BINARY(10),@reccount int ,@maxlsn nvarchar(42) " +
+                                      " SET @start_lsn=sys.Fn_cdc_get_min_lsn('" + captureinstance + "') " +
+                                      " SET @end_lsn = sys.Fn_cdc_get_max_lsn() " +
+                                      " SELECT @maxlsn=UPPER(sys.fn_varbintohexstr(MAX(__$start_lsn))),@reccount=COUNT(*) " +
+                                      " FROM [cdc].[fn_cdc_get_net_changes_" + srctable + "](@start_lsn, @end_lsn, 'all') " +
+                                      System.Environment.NewLine;
+                                        
+            string _sqlqryinsert = _sqlqrygetmaxlsn +  " if not exists(select 1 from sqlcdcapp.connection_details "+
+            " where srcserver='" + srcserver + "' and destserver='" + destserver + "' and srcdb='" + srcdb + "' and srctable='" + srctable.Replace("_",".") + "' and desttable='" + desttable + "') " +
+            " begin " +
+            " INSERT INTO sqlcdcapp.connection_details " +
+            " OUTPUT INSERTED.Cnid,'" + captureinstance + "',@reccount,@maxlsn,getdate(),SUSER_NAME() into sqlcdcapp.IDLoad" +
+            " VALUES ('" + srcserver + "','" + destserver + "','" + srcdb + "','"
+                + destdb + "','" + srctable.Replace("_", ".") + "','" + desttable + "') END ";
+
+            _sqlqrycreatetable = _sqlqrycreatetable + _sqlqryinsert;
+            fn_ExecuteQuery(_sqlqrycreatetable, srcdb);
+
+
+
+        }
     }
 
-
-    public class Tables
+   public class Tables
     {
         public string Databasename { get; set; }
         public string schema { get; set; }
@@ -554,9 +648,7 @@ namespace SQLCDCApp
         public string filegroup_name { get; set; }
         public byte allow_partition_switch { get; set; }
         public List<CDC> cdclist { get; set; }
-        
-
-
+ 
     }
 
 }

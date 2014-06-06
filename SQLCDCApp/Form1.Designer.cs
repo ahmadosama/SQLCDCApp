@@ -60,7 +60,15 @@
             this.textBox_rolename = new System.Windows.Forms.TextBox();
             this.label_rolename = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.textBox_searchdb = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.textBox_databasecount = new System.Windows.Forms.TextBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.textBox_Searchdbtables = new System.Windows.Forms.TextBox();
+            this.label3 = new System.Windows.Forms.Label();
+            this.textBox_Searchtb = new System.Windows.Forms.TextBox();
+            this.label2 = new System.Windows.Forms.Label();
+            this.textBox_tablecount = new System.Windows.Forms.TextBox();
             this.groupBox_SqlCon.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView_Databases)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView_tables)).BeginInit();
@@ -83,7 +91,7 @@
             this.groupBox_SqlCon.Controls.Add(this.label_Server);
             this.groupBox_SqlCon.Location = new System.Drawing.Point(12, 23);
             this.groupBox_SqlCon.Name = "groupBox_SqlCon";
-            this.groupBox_SqlCon.Size = new System.Drawing.Size(402, 120);
+            this.groupBox_SqlCon.Size = new System.Drawing.Size(402, 134);
             this.groupBox_SqlCon.TabIndex = 0;
             this.groupBox_SqlCon.TabStop = false;
             this.groupBox_SqlCon.Text = "Connect To Server";
@@ -173,7 +181,7 @@
             // button_disablecdc
             // 
             this.button_disablecdc.Enabled = false;
-            this.button_disablecdc.Location = new System.Drawing.Point(150, 260);
+            this.button_disablecdc.Location = new System.Drawing.Point(148, 296);
             this.button_disablecdc.Name = "button_disablecdc";
             this.button_disablecdc.Size = new System.Drawing.Size(75, 23);
             this.button_disablecdc.TabIndex = 12;
@@ -184,7 +192,7 @@
             // button_getables
             // 
             this.button_getables.Enabled = false;
-            this.button_getables.Location = new System.Drawing.Point(283, 260);
+            this.button_getables.Location = new System.Drawing.Point(281, 296);
             this.button_getables.Name = "button_getables";
             this.button_getables.Size = new System.Drawing.Size(75, 23);
             this.button_getables.TabIndex = 11;
@@ -195,7 +203,7 @@
             // button_EnableCDCDB
             // 
             this.button_EnableCDCDB.Enabled = false;
-            this.button_EnableCDCDB.Location = new System.Drawing.Point(20, 260);
+            this.button_EnableCDCDB.Location = new System.Drawing.Point(18, 296);
             this.button_EnableCDCDB.Name = "button_EnableCDCDB";
             this.button_EnableCDCDB.Size = new System.Drawing.Size(82, 23);
             this.button_EnableCDCDB.TabIndex = 10;
@@ -210,25 +218,31 @@
             this.dataGridView_Databases.AllowUserToOrderColumns = true;
             this.dataGridView_Databases.BackgroundColor = System.Drawing.SystemColors.Control;
             this.dataGridView_Databases.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView_Databases.Location = new System.Drawing.Point(20, 17);
+            this.dataGridView_Databases.Location = new System.Drawing.Point(18, 45);
             this.dataGridView_Databases.Name = "dataGridView_Databases";
             this.dataGridView_Databases.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
             this.dataGridView_Databases.Size = new System.Drawing.Size(338, 221);
             this.dataGridView_Databases.TabIndex = 9;
+            this.dataGridView_Databases.ColumnHeaderMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.dataGridView_Databases_ColumnHeaderMouseClick);
+            this.dataGridView_Databases.DataBindingComplete += new System.Windows.Forms.DataGridViewBindingCompleteEventHandler(this.dataGridView_Databases_DataBindingComplete);
+            this.dataGridView_Databases.RowsAdded += new System.Windows.Forms.DataGridViewRowsAddedEventHandler(this.dataGridView_Databases_RowsAdded);
             // 
             // dataGridView_tables
             // 
             this.dataGridView_tables.BackgroundColor = System.Drawing.SystemColors.Control;
             this.dataGridView_tables.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView_tables.Location = new System.Drawing.Point(28, 19);
+            this.dataGridView_tables.Location = new System.Drawing.Point(28, 48);
             this.dataGridView_tables.Name = "dataGridView_tables";
             this.dataGridView_tables.Size = new System.Drawing.Size(469, 193);
             this.dataGridView_tables.TabIndex = 1;
+            this.dataGridView_tables.ColumnHeaderMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.dataGridView_tables_ColumnHeaderMouseClick);
+            this.dataGridView_tables.DataBindingComplete += new System.Windows.Forms.DataGridViewBindingCompleteEventHandler(this.dataGridView_tables_DataBindingComplete);
+            this.dataGridView_tables.RowsAdded += new System.Windows.Forms.DataGridViewRowsAddedEventHandler(this.dataGridView_tables_RowsAdded);
             // 
             // button_enabletablecdc
             // 
             this.button_enabletablecdc.Enabled = false;
-            this.button_enabletablecdc.Location = new System.Drawing.Point(11, 176);
+            this.button_enabletablecdc.Location = new System.Drawing.Point(11, 204);
             this.button_enabletablecdc.Name = "button_enabletablecdc";
             this.button_enabletablecdc.Size = new System.Drawing.Size(98, 23);
             this.button_enabletablecdc.TabIndex = 2;
@@ -253,9 +267,9 @@
             this.groupBox_cdctableoption.Controls.Add(this.label_captureinstance);
             this.groupBox_cdctableoption.Controls.Add(this.textBox_rolename);
             this.groupBox_cdctableoption.Controls.Add(this.label_rolename);
-            this.groupBox_cdctableoption.Location = new System.Drawing.Point(28, 242);
+            this.groupBox_cdctableoption.Location = new System.Drawing.Point(28, 266);
             this.groupBox_cdctableoption.Name = "groupBox_cdctableoption";
-            this.groupBox_cdctableoption.Size = new System.Drawing.Size(469, 215);
+            this.groupBox_cdctableoption.Size = new System.Drawing.Size(469, 233);
             this.groupBox_cdctableoption.TabIndex = 3;
             this.groupBox_cdctableoption.TabStop = false;
             this.groupBox_cdctableoption.Text = "Table CDC Options";
@@ -263,7 +277,7 @@
             // button_getchangeddata
             // 
             this.button_getchangeddata.Enabled = false;
-            this.button_getchangeddata.Location = new System.Drawing.Point(209, 176);
+            this.button_getchangeddata.Location = new System.Drawing.Point(209, 204);
             this.button_getchangeddata.Name = "button_getchangeddata";
             this.button_getchangeddata.Size = new System.Drawing.Size(111, 23);
             this.button_getchangeddata.TabIndex = 13;
@@ -274,7 +288,7 @@
             // button_Disablecdctable
             // 
             this.button_Disablecdctable.Enabled = false;
-            this.button_Disablecdctable.Location = new System.Drawing.Point(118, 176);
+            this.button_Disablecdctable.Location = new System.Drawing.Point(118, 204);
             this.button_Disablecdctable.Name = "button_Disablecdctable";
             this.button_Disablecdctable.Size = new System.Drawing.Size(75, 23);
             this.button_Disablecdctable.TabIndex = 12;
@@ -384,28 +398,107 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.textBox_searchdb);
+            this.groupBox1.Controls.Add(this.label1);
+            this.groupBox1.Controls.Add(this.textBox_databasecount);
             this.groupBox1.Controls.Add(this.dataGridView_Databases);
             this.groupBox1.Controls.Add(this.button_disablecdc);
             this.groupBox1.Controls.Add(this.button_getables);
             this.groupBox1.Controls.Add(this.button_EnableCDCDB);
-            this.groupBox1.Location = new System.Drawing.Point(12, 173);
+            this.groupBox1.Location = new System.Drawing.Point(12, 185);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(398, 331);
+            this.groupBox1.Size = new System.Drawing.Size(398, 348);
             this.groupBox1.TabIndex = 13;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Databases";
-            this.groupBox1.Enter += new System.EventHandler(this.groupBox1_Enter);
+            // 
+            // textBox_searchdb
+            // 
+            this.textBox_searchdb.Enabled = false;
+            this.textBox_searchdb.Location = new System.Drawing.Point(106, 19);
+            this.textBox_searchdb.Name = "textBox_searchdb";
+            this.textBox_searchdb.Size = new System.Drawing.Size(100, 20);
+            this.textBox_searchdb.TabIndex = 15;
+            this.textBox_searchdb.TextChanged += new System.EventHandler(this.textBox_searchdb_TextChanged);
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(16, 22);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(90, 13);
+            this.label1.TabIndex = 14;
+            this.label1.Text = "Search Database";
+            // 
+            // textBox_databasecount
+            // 
+            this.textBox_databasecount.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.textBox_databasecount.Location = new System.Drawing.Point(18, 276);
+            this.textBox_databasecount.Name = "textBox_databasecount";
+            this.textBox_databasecount.ReadOnly = true;
+            this.textBox_databasecount.Size = new System.Drawing.Size(188, 13);
+            this.textBox_databasecount.TabIndex = 13;
             // 
             // groupBox2
             // 
+            this.groupBox2.Controls.Add(this.textBox_Searchdbtables);
+            this.groupBox2.Controls.Add(this.label3);
+            this.groupBox2.Controls.Add(this.textBox_Searchtb);
+            this.groupBox2.Controls.Add(this.label2);
+            this.groupBox2.Controls.Add(this.textBox_tablecount);
             this.groupBox2.Controls.Add(this.groupBox_cdctableoption);
             this.groupBox2.Controls.Add(this.dataGridView_tables);
             this.groupBox2.Location = new System.Drawing.Point(420, 23);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(503, 481);
+            this.groupBox2.Size = new System.Drawing.Size(503, 510);
             this.groupBox2.TabIndex = 14;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Tables";
+            // 
+            // textBox_Searchdbtables
+            // 
+            this.textBox_Searchdbtables.Enabled = false;
+            this.textBox_Searchdbtables.Location = new System.Drawing.Point(116, 26);
+            this.textBox_Searchdbtables.Name = "textBox_Searchdbtables";
+            this.textBox_Searchdbtables.Size = new System.Drawing.Size(100, 20);
+            this.textBox_Searchdbtables.TabIndex = 17;
+            this.textBox_Searchdbtables.TextChanged += new System.EventHandler(this.textBox_Searchdbtables_TextChanged);
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(26, 29);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(90, 13);
+            this.label3.TabIndex = 16;
+            this.label3.Text = "Search Database";
+            // 
+            // textBox_Searchtb
+            // 
+            this.textBox_Searchtb.Enabled = false;
+            this.textBox_Searchtb.Location = new System.Drawing.Point(311, 26);
+            this.textBox_Searchtb.Name = "textBox_Searchtb";
+            this.textBox_Searchtb.Size = new System.Drawing.Size(100, 20);
+            this.textBox_Searchtb.TabIndex = 17;
+            this.textBox_Searchtb.TextChanged += new System.EventHandler(this.textBox_Searchtb_TextChanged);
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(234, 29);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(71, 13);
+            this.label2.TabIndex = 16;
+            this.label2.Text = "Search Table";
+            // 
+            // textBox_tablecount
+            // 
+            this.textBox_tablecount.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.textBox_tablecount.Location = new System.Drawing.Point(28, 247);
+            this.textBox_tablecount.Name = "textBox_tablecount";
+            this.textBox_tablecount.ReadOnly = true;
+            this.textBox_tablecount.Size = new System.Drawing.Size(188, 13);
+            this.textBox_tablecount.TabIndex = 14;
             // 
             // Form1
             // 
@@ -428,7 +521,9 @@
             this.groupBox_cdctableoption.ResumeLayout(false);
             this.groupBox_cdctableoption.PerformLayout();
             this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
             this.groupBox2.ResumeLayout(false);
+            this.groupBox2.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -468,6 +563,14 @@
         private System.Windows.Forms.Button button_getchangeddata;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.TextBox textBox_databasecount;
+        private System.Windows.Forms.TextBox textBox_tablecount;
+        private System.Windows.Forms.TextBox textBox_searchdb;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.TextBox textBox_Searchtb;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.TextBox textBox_Searchdbtables;
+        private System.Windows.Forms.Label label3;
 
     }
 }
