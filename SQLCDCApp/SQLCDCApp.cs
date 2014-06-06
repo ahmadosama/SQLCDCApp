@@ -105,6 +105,35 @@ namespace SQLCDCApp
             finally { _Sqlcon.Close(); }
         }
 
+
+        public string fn_Executescalor(string sqlqry, string DatabaseName)
+        {
+            SqlConnection _Sqlcon = new SqlConnection();
+            _Sqlcon = fn_ConnecttoSQL();
+            try
+            {
+
+                if (_Sqlcon.State.ToString() == "Closed")
+                {
+                    _Sqlcon.Open();
+                }
+
+                _Sqlcon.ChangeDatabase(DatabaseName);
+                SqlCommand SqlCmd = new SqlCommand(sqlqry, _Sqlcon);
+                string output = (string)SqlCmd.ExecuteScalar();
+
+                return output;
+            }
+            catch (Exception)
+            {
+
+
+                throw;
+            }
+
+            finally { _Sqlcon.Close(); }
+        }
+
         /// <summary>
         /// executes a query and returns a datatable
         /// </summary>
@@ -392,6 +421,7 @@ namespace SQLCDCApp
                          DataRow drow = result.NewRow();
                          result.Columns.Add(col);
                          result.Rows.Add(drow);
+                         _Qrygetalldata = "";
                          
                      }else
                          if(supports_net_changes>0)
@@ -423,8 +453,10 @@ namespace SQLCDCApp
                  }
             try
             {
-                result = fn_ExecuteReader(_Qrygetalldata, Databasename);
-                
+                if (_Qrygetalldata != "")
+                {
+                    result = fn_ExecuteReader(_Qrygetalldata, Databasename);
+                }
                 return result;
 
             }
@@ -623,6 +655,7 @@ namespace SQLCDCApp
 
 
         }
+        
     }
 
    public class Tables
@@ -631,10 +664,32 @@ namespace SQLCDCApp
         public string schema { get; set; }
         public string name { get; set; }
         public string is_tracked_by_cdc { get; set; }
+        public bool _primary_key_enabled { get; set; }
+
+        public Tables()
+        { }
+
+        public Tables(string Database,string name)
+        {
+            SQLCDCApp obj = new SQLCDCApp();
+            string _sqlqry="SELECT 'true' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE OBJECTPROPERTY(OBJECT_ID(constraint_name), 'IsPrimaryKey') = 1 " +
+            " AND table_name ='" + name + "'";
+            string output = obj.fn_Executescalor(_sqlqry, Database);
+            if(string.IsNullOrEmpty(output))
+            {
+                this._primary_key_enabled = false;
+            }else
+            {
+                this._primary_key_enabled = true;
+            }
+           
+
+        }
+        
 
     }
 
-   public class CDC:Tables
+   public class CDC: Tables
     {
       
          
