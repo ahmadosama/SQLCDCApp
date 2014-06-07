@@ -501,9 +501,6 @@ namespace SQLCDCApp
             {
                 
 
-                
-                
-
                 // create destination table if doesn't exists
                 if(createtable)
                 {
@@ -616,6 +613,26 @@ namespace SQLCDCApp
             return SQLGetType(column.DataType, column.MaxLength, 10, 2);
         }
 
+
+        /// <summary>
+        /// creates the meta database
+        /// </summary>
+        public void fn_CreateDatabase()
+        {
+            fn_ExecuteQuery("if not exists(Select 1 from sys.databases where name='SQLCDCApp') BEGIN Create Database SQLCDCApp END ", "master");
+
+        }
+
+        /// <summary>
+        /// creates the meta tables and marks an entry for each export
+        /// </summary>
+        /// <param name="srcserver"></param>
+        /// <param name="destserver"></param>
+        /// <param name="srcdb"></param>
+        /// <param name="destdb"></param>
+        /// <param name="srctable"></param>
+        /// <param name="desttable"></param>
+        /// <param name="captureinstance"></param>
         public void fn_CreateMetaTables(string srcserver, string destserver,string srcdb,string destdb,string srctable,string desttable,string captureinstance)
         {
             string _sqlqrycreatetable ="if not exists(select 1 from sys.schemas where name ='sqlcdcapp')"+
@@ -635,10 +652,10 @@ namespace SQLCDCApp
             " srclastsyncdate datetime,srcsynclogin varchar(100)) end ";
 
             string _sqlqrygetmaxlsn = " DECLARE @start_lsn BINARY(10),@end_lsn BINARY(10),@reccount int ,@maxlsn nvarchar(42) " +
-                                      " SET @start_lsn=sys.Fn_cdc_get_min_lsn('" + captureinstance + "') " +
-                                      " SET @end_lsn = sys.Fn_cdc_get_max_lsn() " +
+                                      " SET @start_lsn=[" + srcdb + "].sys.Fn_cdc_get_min_lsn('" + captureinstance + "') " +
+                                      " SET @end_lsn = [" + srcdb + "].sys.Fn_cdc_get_max_lsn() " +
                                       " SELECT @maxlsn=UPPER(sys.fn_varbintohexstr(MAX(__$start_lsn))),@reccount=COUNT(*) " +
-                                      " FROM [cdc].[fn_cdc_get_net_changes_" + srctable + "](@start_lsn, @end_lsn, 'all') " +
+                                      " FROM [" + srcdb + "].[cdc].[fn_cdc_get_net_changes_" + srctable + "](@start_lsn, @end_lsn, 'all') " +
                                       System.Environment.NewLine;
                                         
             string _sqlqryinsert = _sqlqrygetmaxlsn +  " if not exists(select 1 from sqlcdcapp.connection_details "+
@@ -650,7 +667,7 @@ namespace SQLCDCApp
                 + destdb + "','" + srctable.Replace("_", ".") + "','" + desttable + "') END ";
 
             _sqlqrycreatetable = _sqlqrycreatetable + _sqlqryinsert;
-            fn_ExecuteQuery(_sqlqrycreatetable, srcdb);
+            fn_ExecuteQuery(_sqlqrycreatetable, "SQLCDCApp");
 
 
 
@@ -666,6 +683,7 @@ namespace SQLCDCApp
         public string is_tracked_by_cdc { get; set; }
         public bool _primary_key_enabled { get; set; }
 
+        
         public Tables()
         { }
 
