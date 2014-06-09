@@ -23,10 +23,13 @@ namespace SQLCDCApp
         
         private void Form1_Load(object sender, EventArgs e)
         {
+            
+            
             comboBox_Authentication.SelectedIndex = 0;
             textBox_User.Enabled = false;
             textBox_password.Enabled = false;
             
+
         }
 
       
@@ -42,8 +45,14 @@ namespace SQLCDCApp
             try
             {
                 Cursor.Current = Cursors.WaitCursor;
+                // check sqlagent status. Exit if not running.
+                
 
-                fn_ListDatabases();
+                if(!fn_ListDatabases())
+                {
+                    Cursor.Current = Cursors.Arrow;
+                    return;
+                }
                 
                 Cursor.Current = Cursors.Arrow;
                 button_EnableCDCDB.Enabled = true;
@@ -72,13 +81,13 @@ namespace SQLCDCApp
             }
         }
 
-        public void fn_ListDatabases()
+        public bool fn_ListDatabases()
         {
             
             SQLCDCApp obj = new SQLCDCApp();
             List<SQLCDCApp> _listdatabases = new List<SQLCDCApp>();
            
-            
+           
             Settings1.Default.Server = textBox_Server.Text;
             Settings1.Default.Password = textBox_password.Text;
             Settings1.Default.User = textBox_User.Text;
@@ -103,6 +112,13 @@ namespace SQLCDCApp
                     }
                 }
 
+                if (!obj.fn_SQLAgentStatusCheck())
+                {
+                    MessageBox.Show("SQL Agent is not running.Please start SQL Agent to use application", "SQLCDCApp Info!!!");
+                    return false;
+                }
+
+
                  dtdblist = obj.fn_GetDatabases();
                 //BindingList<SQLCDCApp> bindlist = new BindingList<SQLCDCApp>(_listdatabases);
 
@@ -126,7 +142,7 @@ namespace SQLCDCApp
                 dataGridView_Databases.Columns[1].ReadOnly = true;
                 dataGridView_Databases.Columns[2].ReadOnly = true;
                 textBox_databasecount.Text = " Total records: " + dtdblist.Rows.Count.ToString();
-
+                return true;
             }
 
             catch (Exception)

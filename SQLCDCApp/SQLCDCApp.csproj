@@ -59,6 +59,12 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ScheduleIDL.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ScheduleIDL.Designer.cs">
+      <DependentUpon>ScheduleIDL.cs</DependentUpon>
+    </Compile>
     <Compile Include="Settings1.cs" />
     <Compile Include="Settings1.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -87,6 +93,9 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <EmbeddedResource Include="ScheduleIDL.resx">
+      <DependentUpon>ScheduleIDL.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="TableName.resx">
       <DependentUpon>TableName.cs</DependentUpon>
     </EmbeddedResource>
