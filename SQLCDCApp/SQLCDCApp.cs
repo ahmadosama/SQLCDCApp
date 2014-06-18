@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using System.Data.Sql;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
-
+using Crypto;
 namespace SQLCDCApp
 {
     
@@ -539,7 +539,7 @@ namespace SQLCDCApp
                 // bulk copy srctable into sql server
                 SqlConnection _Sqlcon = fn_ConnecttoSQL();
                 _Sqlcon.ChangeDatabase(DestDatabase);
-                //_Sqlcon.BeginTransaction("CDCDataExport");
+                
                 
                 using (SqlBulkCopy sbc = new SqlBulkCopy(_Sqlcon))
                     {
@@ -652,7 +652,12 @@ namespace SQLCDCApp
         /// <param name="captureinstance"></param>
         public void fn_CreateMetaTables(string srcserver, string destserver,string srcdb,string destdb,string srctable,string desttable,string captureinstance,string userid,string password)
         {
+            if(string.IsNullOrEmpty(userid))
+            {
+                userid = "$$@#$$";
+            }
 
+            
             string _sqlqrycreatetable ="if not exists(select 1 from sys.schemas where name ='sqlcdcapp')"+
             " BEGIN " +
 	        " EXEC('CREATE SCHEMA sqlcdcapp authorization dbo') " +
@@ -661,28 +666,37 @@ namespace SQLCDCApp
             " BEGIN " +
             " CREATE TABLE sqlcdcapp.connection_details ( " +
             " Cnid int identity Primary Key,srcserver varchar(50), destserver varchar(50), srcdb varchar(50), " +
-            " destdb varchar(50), srctable varchar(100), desttable varchar(100),userid varchar(100), password nvarchar(200),Enabled bit Default(1),SQLJobID uniqueidentifier Default('')) END ";
+            " destdb varchar(50), srctable varchar(100), desttable varchar(100),userid varchar(100) DEFAULT('$$@#$$'), " +
+            " password nvarchar(200),Enabled bit Default(1),SQLJobID uniqueidentifier Default(NULL)) END ";
 
-            _sqlqrycreatetable = _sqlqrycreatetable + System.Environment.NewLine +" if (object_id('sqlcdcapp.IDLoad')) is null  " +
+            _sqlqrycreatetable = _sqlqrycreatetable + System.Environment.NewLine + " if (object_id('sqlcdcapp.IDLoad')) is null  " +
             " BEGIN " +
             " Create table sqlcdcapp.IDLoad (" +
-            " sd_id int identity Primary Key,  cnid int, captureinstance varchar(100),recordcount int, srclaststartlsn nvarchar(42), " +
-            " srclastsyncdate datetime,srcsynclogin varchar(100)) end ";
+            " sdid int identity Primary Key,captureinstance varchar(100), srclaststartlsn nvarchar(42), " +
+            " srclastsyncdate datetime,srcsynclogin varchar(100),SQLJobID UniqueIdentifier DEFAULT(NULL),RecordsInserted int default(0) " +
+            " ,RecordsDeleted int Default(0),RecordsUpdated int Default(0)) END";
 
-            string _sqlqrygetmaxlsn = " DECLARE @start_lsn BINARY(10),@end_lsn BINARY(10),@reccount int ,@maxlsn nvarchar(42) " +
+            string _sqlqrygetmaxlsn = " BEGIN TRAN " +
+                                      " DECLARE @start_lsn BINARY(10),@end_lsn BINARY(10),@reccount int ,@maxlsn nvarchar(42) " +
                                       " SET @start_lsn=[" + srcdb + "].sys.Fn_cdc_get_min_lsn('" + captureinstance + "') " +
                                       " SET @end_lsn = [" + srcdb + "].sys.Fn_cdc_get_max_lsn() " +
                                       " SELECT @maxlsn=UPPER(sys.fn_varbintohexstr(MAX(__$start_lsn))),@reccount=COUNT(*) " +
-                                      " FROM [" + srcdb + "].[cdc].[fn_cdc_get_net_changes_" + srctable + "](@start_lsn, @end_lsn, 'all') " +
-                                      System.Environment.NewLine;
-                                        
-            string _sqlqryinsert = _sqlqrygetmaxlsn +  " if not exists(select 1 from sqlcdcapp.connection_details "+
-            " where srcserver='" + srcserver + "' and destserver='" + destserver + "' and srcdb='" + srcdb + "' and srctable='" + srctable.Replace("_",".") + "' and desttable='" + desttable + "') " +
+                                      " FROM [" + srcdb + "].[cdc].[fn_cdc_get_net_changes_" + srctable + "](@start_lsn, @end_lsn, 'all') ";
+
+
+            string _sqlqryinsert = _sqlqrygetmaxlsn + " if not exists(select 1 from sqlcdcapp.connection_details " +
+            " where srcserver='" + srcserver + "' and destserver='" + destserver + "' and srcdb='" + srcdb + "' and srctable='" + srctable.Replace("_", ".") + "' and desttable='" + desttable + "') " +
             " begin " +
-            " INSERT INTO sqlcdcapp.connection_details (srcserver, destserver, srcdb,destdb ,srctable ,desttable,userid , password)" +
-            " OUTPUT INSERTED.Cnid,'" + captureinstance + "',@reccount,@maxlsn,getdate(),SUSER_NAME() into sqlcdcapp.IDLoad" +
+            " INSERT INTO sqlcdcapp.connection_details " +
+            " (srcserver,destserver,srcdb,destdb,srctable,desttable,userid,password) " +
+                //" OUTPUT INSERTED.Cnid,'" + captureinstance + "',@reccount,@maxlsn,getdate(),SUSER_NAME() into sqlcdcapp.IDLoad" +
             " VALUES('" + srcserver + "','" + destserver + "','" + srcdb + "','"
-                + destdb + "','" + srctable.Replace("_", ".") + "','" + desttable + "','" + userid + "','" + password + "') END ";
+                + destdb + "','" + srctable.Replace("_", ".") + "','" + desttable + "','" + userid + "','" + password + "') END " +
+            " INSERT INTO sqlcdcapp.IDLoad (captureInstance,srclaststartlsn,srclastsyncdate,srcsynclogin,recordsinserted) " +
+            " VALUES('" + captureinstance + "',@maxlsn,GetDate(),SUser_Name(),@reccount)" +
+            " COMMIT TRAN ";
+            
+
 
             _sqlqrycreatetable = _sqlqrycreatetable + _sqlqryinsert;
             fn_ExecuteQuery(_sqlqrycreatetable, "SQLCDCApp");
@@ -726,62 +740,62 @@ namespace SQLCDCApp
     }
 
 
-    public class Crypto
-    {
-        /// <summary>
-        /// encrypt a string
-        /// </summary>
-        /// <param name="toEncrypt"></param>
-        /// <param name="useHashing"></param>
-        /// <returns></returns>
-        public static string Encrypt(string toEncrypt, bool useHashing)
-        {
-            byte[] keyArray;
-            byte[] toEncryptArray = UTF8Encoding.UTF8.GetBytes(toEncrypt);
+    //public class Crypto
+    //{
+    //    /// <summary>
+    //    /// encrypt a string
+    //    /// </summary>
+    //    /// <param name="toEncrypt"></param>
+    //    /// <param name="useHashing"></param>
+    //    /// <returns></returns>
+    //    public static string Encrypt(string toEncrypt, bool useHashing)
+    //    {
+    //        byte[] keyArray;
+    //        byte[] toEncryptArray = UTF8Encoding.UTF8.GetBytes(toEncrypt);
 
-            //System.Configuration.AppSettingsReader settingsReader =  new AppSettingsReader();
-            // Get the key from config file
+    //        //System.Configuration.AppSettingsReader settingsReader =  new AppSettingsReader();
+    //        // Get the key from config file
             
-            //string key = (string)settingsReader.GetValue("SecurityKey", typeof(String));
-            string key = "09153056t343984y59y4594337";
-            //System.Windows.Forms.MessageBox.Show(key);
-            //If hashing use get hashcode regards to your key
-            if (useHashing)
-            {
-                MD5CryptoServiceProvider hashmd5 = new MD5CryptoServiceProvider();
-                keyArray = hashmd5.ComputeHash(UTF8Encoding.UTF8.GetBytes(key));
-                //Always release the resources and flush data
-                // of the Cryptographic service provide. Best Practice
+    //        //string key = (string)settingsReader.GetValue("SecurityKey", typeof(String));
+    //        string key = "09153056t343984y59y4594337";
+    //        //System.Windows.Forms.MessageBox.Show(key);
+    //        //If hashing use get hashcode regards to your key
+    //        if (useHashing)
+    //        {
+    //            MD5CryptoServiceProvider hashmd5 = new MD5CryptoServiceProvider();
+    //            keyArray = hashmd5.ComputeHash(UTF8Encoding.UTF8.GetBytes(key));
+    //            //Always release the resources and flush data
+    //            // of the Cryptographic service provide. Best Practice
 
-                hashmd5.Clear();
-            }
-            else
-                keyArray = UTF8Encoding.UTF8.GetBytes(key);
+    //            hashmd5.Clear();
+    //        }
+    //        else
+    //            keyArray = UTF8Encoding.UTF8.GetBytes(key);
 
-            TripleDESCryptoServiceProvider tdes = new TripleDESCryptoServiceProvider();
-            //set the secret key for the tripleDES algorithm
-            tdes.Key = keyArray;
-            //mode of operation. there are other 4 modes.
-            //We choose ECB(Electronic code Book)
-            tdes.Mode = CipherMode.ECB;
-            //padding mode(if any extra byte added)
+    //        TripleDESCryptoServiceProvider tdes = new TripleDESCryptoServiceProvider();
+    //        //set the secret key for the tripleDES algorithm
+    //        tdes.Key = keyArray;
+    //        //mode of operation. there are other 4 modes.
+    //        //We choose ECB(Electronic code Book)
+    //        tdes.Mode = CipherMode.ECB;
+    //        //padding mode(if any extra byte added)
 
-            tdes.Padding = PaddingMode.PKCS7;
+    //        tdes.Padding = PaddingMode.PKCS7;
 
-            ICryptoTransform cTransform = tdes.CreateEncryptor();
-            //transform the specified region of bytes array to resultArray
-            byte[] resultArray =
-              cTransform.TransformFinalBlock(toEncryptArray, 0,
-              toEncryptArray.Length);
-            //Release resources held by TripleDes Encryptor
-            tdes.Clear();
-            //Return the encrypted data into unreadable string format
-            return Convert.ToBase64String(resultArray, 0, resultArray.Length);
-        }
+    //        ICryptoTransform cTransform = tdes.CreateEncryptor();
+    //        //transform the specified region of bytes array to resultArray
+    //        byte[] resultArray =
+    //          cTransform.TransformFinalBlock(toEncryptArray, 0,
+    //          toEncryptArray.Length);
+    //        //Release resources held by TripleDes Encryptor
+    //        tdes.Clear();
+    //        //Return the encrypted data into unreadable string format
+    //        return Convert.ToBase64String(resultArray, 0, resultArray.Length);
+    //    }
 
        
 
-    }
+    
    public class CDC: Tables
     {
       
