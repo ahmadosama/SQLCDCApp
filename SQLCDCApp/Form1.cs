@@ -24,12 +24,10 @@ namespace SQLCDCApp
         private void Form1_Load(object sender, EventArgs e)
         {
             
-            
             comboBox_Authentication.SelectedIndex = 0;
             textBox_User.Enabled = false;
             textBox_password.Enabled = false;
             
-
         }
 
       
@@ -59,6 +57,10 @@ namespace SQLCDCApp
                 button_disablecdc.Enabled = true;
                 button_getables.Enabled = true;
                 textBox_searchdb.Text = "";
+                SQLCDCApp scdc = new SQLCDCApp();
+                scdc.fn_CreateDatabase();
+                scdc.fn_initialiseMetatables();
+
             }
             catch(Exception  ex)
             {
@@ -89,7 +91,7 @@ namespace SQLCDCApp
            
            
             Settings1.Default.Server = textBox_Server.Text;
-            Settings1.Default.Password = textBox_password.Text;
+            Settings1.Default.Password = Crypto.Crypto.Encrypt(textBox_password.Text,true);
             Settings1.Default.User = textBox_User.Text;
             Settings1.Default.AuthenticationType = comboBox_Authentication.Text;
 
@@ -119,7 +121,8 @@ namespace SQLCDCApp
                 }
 
 
-                 dtdblist = obj.fn_GetDatabases();
+                 dtdblist = obj.fn_GetDatabases("source");
+
                 //BindingList<SQLCDCApp> bindlist = new BindingList<SQLCDCApp>(_listdatabases);
 
 
@@ -302,47 +305,55 @@ namespace SQLCDCApp
                 {
                     if (Convert.ToBoolean(row.Cells[0].Value) == true)
                     {
-                        rows_with_checked_column.Add(row);
+                        if (row.Cells[2].Value.ToString() == "False")
+                        {
+                            MessageBox.Show("Database " + row.Cells[1].Value.ToString() + " isn't enabled for CDC ", "SQLCDCApp Info!!!");
+                        }
+                        else
+                        {
+                            rows_with_checked_column.Add(row);
+                        }
                     }
                 }
 
-                foreach (DataGridViewRow dgvr in rows_with_checked_column)
+                if (rows_with_checked_column.Count > 0)
                 {
-
-                    if (dgvr.Cells[2].Value.ToString() == "True")
+                    foreach (DataGridViewRow dgvr in rows_with_checked_column)
                     {
-                        dblist.Add(dgvr.Cells[1].Value.ToString());
+                        if (dgvr.Cells[2].Value.ToString() == "True")
+                        {
+                            dblist.Add(dgvr.Cells[1].Value.ToString());
+                        }
+                    }
+
+                    DataSet ds = obj.fn_GetTables(dblist);
+                    //tablelist = obj.fn_GetTables(dblist);
+                    DataTable dtAll = ds.Tables[0].Copy();
+                    for (var i = 1; i < ds.Tables.Count; i++)
+                    {
+                        dtAll.Merge(ds.Tables[i]);
+                    }
+                    dataGridView_tables.AutoGenerateColumns = true;
+                    dataGridView_tables.DataSource = dtAll;
+                    dttablelist = dtAll;
+
+                    if (dataGridView_tables.ColumnCount < 5)
+                    {
+                        DataGridViewCheckBoxColumn cb = new DataGridViewCheckBoxColumn();
+                        cb.Frozen = true;
+
+                        cb.Name = "Select";
+                        cb.Width = 40;
+
+                        dataGridView_tables.Columns.Insert(0, cb);
+                        cb.TrueValue = 1;
+                        cb.FalseValue = 0;
 
                     }
+                    textBox_tablecount.Text = " Total records: " + dtAll.Rows.Count.ToString();
                 }
-
-                DataSet ds = obj.fn_GetTables(dblist);
-                //tablelist = obj.fn_GetTables(dblist);
-                DataTable dtAll = ds.Tables[0].Copy();
-                for (var i = 1; i < ds.Tables.Count; i++)
-                {
-                    dtAll.Merge(ds.Tables[i]);
-                }
-                dataGridView_tables.AutoGenerateColumns = true;
-                dataGridView_tables.DataSource = dtAll;
-                dttablelist = dtAll;
-
-                if (dataGridView_tables.ColumnCount < 5)
-                {
-                    DataGridViewCheckBoxColumn cb = new DataGridViewCheckBoxColumn();
-                    cb.Frozen = true;
-
-                    cb.Name = "Select";
-                    cb.Width = 40;
-
-                    dataGridView_tables.Columns.Insert(0, cb);
-                    cb.TrueValue = 1;
-                    cb.FalseValue = 0;
-
-                }
-                textBox_tablecount.Text = " Total records: " + dtAll.Rows.Count.ToString();
             }
-            catch(Exception)
+            catch (Exception)
             {
                 throw;
             }
@@ -455,10 +466,10 @@ namespace SQLCDCApp
                     MessageBox.Show("Please select a table.", "SQLCDCApp Info !!!");
                     return;
                 }
-
+                CDC cdcobj = new CDC();
                 foreach (DataGridViewRow dgvr in rows_with_checked_column)
                 {
-                    CDC cdcobj = new CDC();
+                    
 
                     if (dgvr.Cells[4].Value.ToString() == "True")
                     {
@@ -470,7 +481,10 @@ namespace SQLCDCApp
                     }
                 }
 
+
                 MessageBox.Show(scdc.fn_EnableCDCOnTable(cdclist, false).ToString(), "SQLCDCApp Info !!!");
+               // open form to get list of captureinstance to disable.
+               // Form _fci = new CaptureInstances();
                 fn_ListTables();
                 Cursor.Current = Cursors.Arrow;
             }catch(Exception ex)
@@ -529,6 +543,11 @@ namespace SQLCDCApp
                 {
                     if (Convert.ToBoolean(row.Cells[0].Value) == true)
                     {
+                        if(row.Cells[4].Value.ToString()=="False")
+                        {
+                            MessageBox.Show("Table " + row.Cells[3].Value.ToString() + " isn't enabled for CDC.", "SQLCDCApp Info!!!");
+                            return;
+                        }
                         rows_with_checked_column.Add(row);
                     }
                 }
@@ -549,7 +568,7 @@ namespace SQLCDCApp
                 cdclist = fn_getselectedtables();
                 List<string> lst = new List<string>();
                 lst = scdc.fn_CaptureInstance(cdclist);
-
+                
                 Form nf = new CDCData(lst);
                 nf.ShowDialog();
                 Cursor.Current = Cursors.Arrow;
@@ -669,6 +688,12 @@ namespace SQLCDCApp
         {
             textBox_Searchdbtables.Enabled = true;
             textBox_Searchtb.Enabled = true;
+        }
+
+        private void scheduleIDLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Form nf = new ScheduleIDL();
+            nf.ShowDialog();
         }
 
     }

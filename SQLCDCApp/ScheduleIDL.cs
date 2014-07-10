@@ -15,6 +15,13 @@ namespace SQLCDCApp
         public ScheduleIDL()
         {
             InitializeComponent();
+            SQLCDCApp obj = new SQLCDCApp();
+           // dataGridView_scheduleresult.DataSource = obj.fn_getexportrecord();
+        }
+
+        private void ScheduleIDL_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }

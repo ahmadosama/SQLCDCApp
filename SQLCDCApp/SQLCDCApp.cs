@@ -8,6 +8,7 @@ using System.Data.Sql;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 using Crypto;
+using SQLDBManager;
 namespace SQLCDCApp
 {
     
@@ -17,13 +18,12 @@ namespace SQLCDCApp
 
         public string DatabaseName { get; set; }
         public  string is_cdc_enabled { get; set; }
-  
         
         /// <summary>
         /// returns a sql connection
         /// </summary>
         /// <returns></returns>
-        public SqlConnection fn_ConnecttoSQL()
+     /*   public SqlConnection fn_ConnecttoSQL()
         {
            
             string _ConnectionString = "";
@@ -48,12 +48,14 @@ namespace SQLCDCApp
                 throw;
             }
         }
-
+        */
 
         public bool fn_SQLAgentStatusCheck()
         {
-            string sqlagentcheckqry = "select '1' from sys.sysprocesses where program_name = N'SQLAgent - Generic Refresher'";
-            string output = fn_Executescalor(sqlagentcheckqry, "master");
+            QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true), "master", Settings1.Default.AuthenticationType);
+        
+            string _sqlagentcheckqry = "select '1' from sys.sysprocesses where program_name = N'SQLAgent - Generic Refresher'";
+            string output = _qe.fn_ExecuteScalor(_sqlagentcheckqry);
             bool result=false;
             if(output=="1")
             {
@@ -69,13 +71,26 @@ namespace SQLCDCApp
         /// returns true when successfull
         /// </summary>
         /// <returns></returns>
-        public DataTable fn_GetDatabases()
+        public DataTable fn_GetDatabases(string where)
         {
-            
+            QueryExecution _qe = new QueryExecution();
+            if(where=="source")
+            {
+                 _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true),
+                  "master", Settings1.Default.AuthenticationType);
+            }else
+                if(where=="destination")
+                {
+                     _qe = new QueryExecution(Settings1.Default.Destserver, Settings1.Default.Destuser, Crypto.Crypto.Decrypt(Settings1.Default.Destpassword, true),
+                  "master", Settings1.Default.Destauthtype);
+                }
             try
             {
-                DataTable dtdbs = fn_ExecuteReader("Select name,CASE is_cdc_enabled WHEN 0 Then 'False' WHEN 1 THEN 'True' END AS is_cdc_enabled from sys.databases where database_id>4 " +
-                "and state_desc='Online' order by is_cdc_enabled desc ", "master");
+                Genericsql _gs = new Genericsql();
+                //string _querytolistdatabases ="Select name,CASE is_cdc_enabled WHEN 0 Then 'False' WHEN 1 THEN 'True' END AS is_cdc_enabled from "+
+                //" sys.databases where database_id>4 and state_desc='Online' order by is_cdc_enabled desc ";
+                DataTable dtdbs=_gs.databaselist(_qe);
+                //DataTable dtdbs = _qe.fn_ExecuteTable(_querytolistdatabases);
                 return dtdbs;
             }
             
@@ -93,7 +108,7 @@ namespace SQLCDCApp
         /// <param name="sqlqry"></param>
         /// <param name="DatabaseName"></param>
         /// <returns></returns>
-        private bool fn_ExecuteQuery(string sqlqry,string DatabaseName)
+    /*    private bool fn_ExecuteQuery(string sqlqry,string DatabaseName)
         {
             SqlConnection _Sqlcon = new SqlConnection();
             _Sqlcon = fn_ConnecttoSQL();
@@ -121,7 +136,8 @@ namespace SQLCDCApp
             finally { _Sqlcon.Close(); }
         }
 
-
+        */
+        /*
         public string fn_Executescalor(string sqlqry, string DatabaseName)
         {
             SqlConnection _Sqlcon = new SqlConnection();
@@ -149,13 +165,14 @@ namespace SQLCDCApp
 
             finally { _Sqlcon.Close(); }
         }
-
+        */
         /// <summary>
         /// executes a query and returns a datatable
         /// </summary>
         /// <param name="sqlqry"></param>
         /// <param name="DatabaseName"></param>
         /// <returns></returns>
+        /*
         private DataTable fn_ExecuteReader(string sqlqry, string DatabaseName)
         {
             SqlConnection _Sqlcon = new SqlConnection();
@@ -182,14 +199,14 @@ namespace SQLCDCApp
                 
 
             }
-            catch (SqlException ex)
+            catch (SqlException)
             {
                 throw;
             }
 
           //  finally { _Sqlcon.Close(); }
         }
-        
+        */
         /// <summary>
         /// Enable CDC on selected databases
         /// </summary>
@@ -197,20 +214,24 @@ namespace SQLCDCApp
         /// <returns></returns>
         public bool fn_ConfigureCDC(List<string> ListDbtoEnableCDC,bool Enable)
         {
-            string sqlqry;
+            string _sqlqry;
+           
             if(Enable)
             {
-                sqlqry="Exec sp_cdc_enable_db ";
+                _sqlqry="Exec sp_cdc_enable_db ";
             }
             else
             {
-                sqlqry = "Exec sp_cdc_disable_db ";
+                _sqlqry = "Exec sp_cdc_disable_db ";
             }
             try
             {
                 foreach (string db in ListDbtoEnableCDC)
                 {
-                    fn_ExecuteQuery (sqlqry, db);
+                    //fn_ExecuteQuery (_sqlqry, db);
+                    QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true),
+                                db, Settings1.Default.AuthenticationType);
+                    _qe.fn_ExecuteQuery(_sqlqry);
                     
                 }
                 return true;
@@ -230,27 +251,38 @@ namespace SQLCDCApp
         /// marks them as cdc enabled or not.
         /// </summary>
         /// <returns></returns>
-        public DataSet fn_GetTables(List<string> Dblist)
+        public DataSet fn_GetTables(List<string> Dblist,string srv="Source")
         {
             
-           
             try
             {
-               
-                DataSet ds = new DataSet();
+                QueryExecution _qe = new QueryExecution();
+                DataSet _ds = new DataSet();
                 foreach (string db in Dblist)
                 {
                        
-                    DataTable dttbist = new DataTable();
-                    string Qrygettables = " Select '" + db + "' AS DatabaseName,[schemaname]=ss.name,st.name, " +
+                    DataTable _dttbist = new DataTable();
+                    string _Qrygettables = " Select '" + db + "' AS DatabaseName,[schemaname]=ss.name,st.name, " +
                     "Case is_tracked_by_cdc WHEN 0 THEN 'False' WHEN 1 THEN 'True' END As is_tracked_by_cdc  " + 
                         " from sys.Tables st  " +
                         "  join sys.schemas ss on st.schema_id=ss.schema_id order by name";
-                    dttbist = fn_ExecuteReader(Qrygettables, db);
-                    ds.Tables.Add(dttbist); 
+                  
+                    if (srv == "Destination")
+                    {
+                         _qe = new QueryExecution(Settings1.Default.Destserver, Settings1.Default.Destuser, 
+                             Crypto.Crypto.Decrypt(Settings1.Default.Destpassword, true),db, Settings1.Default.Destauthtype);
+                    }
+                    else
+                    {
+                         _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, 
+                             Crypto.Crypto.Decrypt(Settings1.Default.Password, true),db, Settings1.Default.AuthenticationType);
+                    }
+
+                    _dttbist = _qe.fn_ExecuteTable(_Qrygettables);
+                    _ds.Tables.Add(_dttbist); 
                 }
                 
-                return ds;
+                return _ds;
             }
             catch (Exception)
             {
@@ -328,9 +360,14 @@ namespace SQLCDCApp
                         QryEnableCdcOnTable = QryEnableCdcOnTable + " @allow_partition_switch='" + cdcobj.allow_partition_switch + "',";
                     }
 
-                    fn_ExecuteQuery(QryEnableCdcOnTable.Substring(0, QryEnableCdcOnTable.Length - 1), cdcobj.Databasename);
-                }
+                    QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true),
+    cdcobj.Databasename, Settings1.Default.AuthenticationType);
+                    _qe.fn_ExecuteQuery(QryEnableCdcOnTable.Substring(0, QryEnableCdcOnTable.Length - 1));
+                    // update meta table
 
+                }
+               // update meta data tables
+                fn_disablecaptureinstance(cdclist);
                 return returnmsg;
             }catch(Exception)
             {
@@ -346,30 +383,39 @@ namespace SQLCDCApp
         public List<string> fn_CaptureInstance(List<CDC> cdclist)
         {
             List<string> lst = new List<string>();
-            SqlConnection _Sqlcon = new SqlConnection();
-            SqlDataReader Datareader; 
-            _Sqlcon = fn_ConnecttoSQL();
+            //SqlConnection _Sqlcon = new SqlConnection();
+            //SqlDataReader Datareader; 
+            //_Sqlcon = fn_ConnecttoSQL();
             try
             {
-                if (_Sqlcon.State.ToString() == "Closed")
-                {
-                    _Sqlcon.Open();
-                }
+                //if (_Sqlcon.State.ToString() == "Closed")
+                //{
+                //    _Sqlcon.Open();
+                //}
 
                 foreach(CDC cdcobj in cdclist)
                 {
-                    _Sqlcon.ChangeDatabase(cdcobj.Databasename);
-                    string Qry= "Select capture_instance from cdc.change_tables where source_object_id=object_id('" + cdcobj.source_schema + "." + cdcobj.source_name + "')";
+                    //_Sqlcon.ChangeDatabase(cdcobj.Databasename);
+                    string _qry= "Select capture_instance from cdc.change_tables where source_object_id= " + 
+                        " object_id('" + cdcobj.source_schema + "." + cdcobj.source_name + "')";
+                    QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true),
+    cdcobj.Databasename, Settings1.Default.AuthenticationType);
+                    DataTable _dt = _qe.fn_ExecuteTable(_qry);
+                    
+                   /*
                     SqlCommand sqlcmd = new SqlCommand(Qry, _Sqlcon);
                     Datareader=sqlcmd.ExecuteReader();
                     while (Datareader.Read())
                     {
                         lst.Add(Datareader[0].ToString());
                     }
-
+                    */
+                    foreach (DataRow _dr in _dt.Rows)
+                    {
+                        lst.Add(_dr[0].ToString());
+                    }
                     lst.Add(cdcobj.source_schema + "_" + cdcobj.source_name);
                     lst.Add(cdcobj.Databasename);
-                    
                 }
 
                 return lst;
@@ -379,10 +425,6 @@ namespace SQLCDCApp
                 throw;
             }
 
-            finally
-            {
-                _Sqlcon.Close();
-            }
 
         }
         
@@ -396,7 +438,8 @@ namespace SQLCDCApp
         /// <param name="starttime"></param>
         /// <param name="endtime"></param>
         /// <returns></returns>
-        public DataTable fn_GetChangeData(int ChangeDataType,string Databasename,string tablename,string captureinstance,DateTime starttime,DateTime endtime)
+        public DataTable fn_GetChangeData(int ChangeDataType,string Databasename,string tablename,string captureinstance,
+            DateTime starttime,DateTime endtime)
         {
             string msg = "Table doesn't supports net changes";
             string _Qrygetalldata = "";
@@ -424,7 +467,9 @@ namespace SQLCDCApp
                      // check if it's enabled for net changes
                      Int32 supports_net_changes=-1;
                      string _sqlqry = "select supports_net_changes from cdc.change_tables where capture_instance='" + captureinstance + "'";
-                     DataTable dt = fn_ExecuteReader(_sqlqry, Databasename);
+                     QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true),
+    Databasename, Settings1.Default.AuthenticationType);
+                     DataTable dt = _qe.fn_ExecuteTable(_sqlqry);
                      for (int i = 0; i < dt.Rows.Count; i++)
                      {
                           supports_net_changes = Convert.ToInt32(dt.Rows[i]["supports_net_changes"]);
@@ -472,7 +517,9 @@ namespace SQLCDCApp
             {
                 if (_Qrygetalldata != "")
                 {
-                    result = fn_ExecuteReader(_Qrygetalldata, Databasename);
+                    QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true),
+    Databasename, Settings1.Default.AuthenticationType);
+                    result = _qe.fn_ExecuteTable(_Qrygetalldata);
                 }
                 return result;
 
@@ -483,6 +530,44 @@ namespace SQLCDCApp
             }
               
         }
+      
+        /// <summary>
+        /// expot full tabl
+        /// </summary>
+        /// <param name="srcdb"></param>
+        /// <param name="srctable"></param>
+        /// <param name="destdb"></param>
+        /// <param name="desttable"></param>
+        public int fn_exportalldata(string srcdb,string srctable,string destdb,string desttable)
+        {
+            try
+            {
+                QueryExecution _srcqe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, 
+                    Crypto.Crypto.Decrypt(Settings1.Default.Password, true),srcdb, Settings1.Default.AuthenticationType);
+                // create destination table
+                string _qrytblcols = " select stuff((select ',' + sc.name from sys.objects so join sys.schemas ss " +
+                                  "  ON so.schema_id=ss.schema_id join sys.columns sc ON sc.object_id=so.object_id " +
+                                  "  where so.object_id=object_id('" + srctable + "') for xml path('')),1,1,'')";
+                string _collist = _srcqe.fn_ExecuteScalor(_qrytblcols);
+
+                DataTable _dtsrctable = _srcqe.fn_ExecuteTable("SELECT " + _collist + ",'INSERT' AS Operation from " + srctable);
+                if(_dtsrctable.Rows.Count==0)
+                {
+                    throw new ApplicationException("No data to export!!");
+                }
+                QueryExecution _destqe = new QueryExecution(Settings1.Default.Destserver, Settings1.Default.Destuser, 
+                    Crypto.Crypto.Decrypt(Settings1.Default.Destpassword, true),destdb, Settings1.Default.Destauthtype);
+
+                _destqe.fn_sqlbulkinsert(_dtsrctable, desttable);
+
+                return _dtsrctable.Rows.Count;
+            }catch(Exception)
+            {
+                throw;
+            }
+
+        }
+
 
         /// <summary>
         /// create destination table
@@ -493,9 +578,11 @@ namespace SQLCDCApp
         /// <param name="desttable"></param>
         /// <param name="createtable"></param>
         /// <param name="DestDatabase"></param>
-        public void fn_ExportToDB(DataTable srctable,string desttable,bool createtable,string DestDatabase)
+        public int fn_ExportToDB(DataTable srctable,string desttable,bool createtable,string DestDatabase,
+            string exportcheck="true",string sourcedb=null,string destinationdb=null)
         {
-            DataTable tmpsrctable = srctable;
+            DataTable tmpsrctable = srctable.Copy();
+
             if (tmpsrctable.Columns.Contains("__$start_lsn") == true)
             { 
                 tmpsrctable.Columns.Remove("__$start_lsn");
@@ -516,42 +603,46 @@ namespace SQLCDCApp
                 
             try
             {
-                
 
+                QueryExecution _qe = new QueryExecution(Settings1.Default.Destserver, Settings1.Default.Destuser, Crypto.Crypto.Decrypt(Settings1.Default.Destpassword, true),
+    DestDatabase, Settings1.Default.Destauthtype);
                 // create destination table if doesn't exists
                 if(createtable)
                 {
-                    string sql = "CREATE TABLE [" + desttable + "] (";
+                    string _sql = "If (object_id('" + desttable + "')) is null CREATE TABLE [" + desttable + "] (";
                     // columns
                     foreach (DataColumn column in tmpsrctable.Columns)
                     {
                         //if (column.ColumnName != "__$start_lsn" && column.ColumnName != "__$seqval" && column.ColumnName != "__$operation" && column.ColumnName != "__$update_mask")
-                        sql += "[" + column.ColumnName + "] " + SQLGetType(column) + ",";
+                        _sql += "[" + column.ColumnName + "] " + SQLGetType(column) + ",";
                     }
-                    sql = sql + " DateLastUpdated Datetime default(getdate()))";
+                    _sql = _sql + " DateLastUpdated Datetime default(getdate()))";
                     //sql = sql.Substring(0,sql.Length-1) + ")";
-
-                    fn_ExecuteQuery(sql, DestDatabase);
+                    _qe.fn_ExecuteQuery(_sql);
+                    
+                    //fn_ExecuteQuery(sql, DestDatabase);
 
                 }
 
-               
+                int _recordcount = 0;
                 // bulk copy srctable into sql server
-                SqlConnection _Sqlcon = fn_ConnecttoSQL();
-                _Sqlcon.ChangeDatabase(DestDatabase);
-                
-                
-                using (SqlBulkCopy sbc = new SqlBulkCopy(_Sqlcon))
-                    {
-                        sbc.DestinationTableName=desttable;
-                        foreach (var column in tmpsrctable.Columns)
-                            sbc.ColumnMappings.Add(column.ToString(), column.ToString());
-                        sbc.WriteToServer(srctable);
-                    }
-                
+                if (exportcheck == "true")
+                {
+                    if(srctable.Rows.Count==0)
+                    { throw new ApplicationException("No data to export!!!"); }
+                    _qe.fn_sqlbulkinsert(tmpsrctable, desttable);
+                    _recordcount = tmpsrctable.Rows.Count;
+                }else if (exportcheck=="false")
+                {
+                    
+                    _recordcount=fn_exportalldata(sourcedb,srctable.TableName.ToString() , destinationdb, desttable);
+                }
+
+                return _recordcount;
             }
             catch (Exception)
             {
+
                 throw;
             }
         }
@@ -629,14 +720,16 @@ namespace SQLCDCApp
         {
             return SQLGetType(column.DataType, column.MaxLength, 10, 2);
         }
-
+       
 
         /// <summary>
         /// creates the meta database
         /// </summary>
         public void fn_CreateDatabase()
         {
-            fn_ExecuteQuery("if not exists(Select 1 from sys.databases where name='SQLCDCApp') BEGIN Create Database SQLCDCApp END ", "master");
+            QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true),
+    "master", Settings1.Default.AuthenticationType);
+           _qe.fn_ExecuteQuery("if not exists(Select 1 from sys.databases where name='SQLCDCApp') BEGIN Create Database SQLCDCApp END ");
 
         }
 
@@ -650,61 +743,185 @@ namespace SQLCDCApp
         /// <param name="srctable"></param>
         /// <param name="desttable"></param>
         /// <param name="captureinstance"></param>
-        public void fn_CreateMetaTables(string srcserver, string destserver,string srcdb,string destdb,string srctable,string desttable,string captureinstance,string userid,string password)
+        public void fn_Updatemetatables(string srcserver, string destserver,string srcdb,string destdb,string srctable,
+            string desttable,string captureinstance,string userid,string password)
         {
             if(string.IsNullOrEmpty(userid))
             {
                 userid = "$$@#$$";
             }
 
-            
-            string _sqlqrycreatetable ="if not exists(select 1 from sys.schemas where name ='sqlcdcapp')"+
-            " BEGIN " +
-	        " EXEC('CREATE SCHEMA sqlcdcapp authorization dbo') " +
-            " END " + 
-            " if (object_id('sqlcdcapp.connection_details')) is null " +
-            " BEGIN " +
-            " CREATE TABLE sqlcdcapp.connection_details ( " +
-            " Cnid int identity Primary Key,srcserver varchar(50), destserver varchar(50), srcdb varchar(50), " +
-            " destdb varchar(50), srctable varchar(100), desttable varchar(100),userid varchar(100) DEFAULT('$$@#$$'), " +
-            " password nvarchar(200),Enabled bit Default(1),SQLJobID uniqueidentifier Default(NULL)) END ";
-
-            _sqlqrycreatetable = _sqlqrycreatetable + System.Environment.NewLine + " if (object_id('sqlcdcapp.IDLoad')) is null  " +
-            " BEGIN " +
-            " Create table sqlcdcapp.IDLoad (" +
-            " sdid int identity Primary Key,captureinstance varchar(100), srclaststartlsn nvarchar(42), " +
-            " srclastsyncdate datetime,srcsynclogin varchar(100),SQLJobID UniqueIdentifier DEFAULT(NULL),RecordsInserted int default(0) " +
-            " ,RecordsDeleted int Default(0),RecordsUpdated int Default(0)) END";
-
-            string _sqlqrygetmaxlsn = " BEGIN TRAN " +
+                        string _sqlqrygetmaxlsn = " BEGIN TRAN " +
                                       " DECLARE @start_lsn BINARY(10),@end_lsn BINARY(10),@reccount int ,@maxlsn nvarchar(42) " +
                                       " SET @start_lsn=[" + srcdb + "].sys.Fn_cdc_get_min_lsn('" + captureinstance + "') " +
                                       " SET @end_lsn = [" + srcdb + "].sys.Fn_cdc_get_max_lsn() " +
                                       " SELECT @maxlsn=UPPER(sys.fn_varbintohexstr(MAX(__$start_lsn))),@reccount=COUNT(*) " +
                                       " FROM [" + srcdb + "].[cdc].[fn_cdc_get_net_changes_" + srctable + "](@start_lsn, @end_lsn, 'all') ";
-
-
+            /*        
+            string _sqlqrygetmaxlsn = " BEGIN TRAN " +
+                                   " DECLARE @start_lsn BINARY(10),@end_lsn BINARY(10),@reccount int ,@maxlsn nvarchar(42) " +
+                                   " SET @start_lsn=[" + srcdb + "].sys.Fn_cdc_get_min_lsn('" + captureinstance + "') ";
+                                   //" SET @end_lsn = [" + srcdb + "].sys.Fn_cdc_get_max_lsn() " +
+                                   //" SELECT @maxlsn=UPPER(sys.fn_varbintohexstr(MAX(__$start_lsn))),@reccount=COUNT(*) " +
+                                   //" FROM [" + srcdb + "].[cdc].[fn_cdc_get_net_changes_" + srctable + "](@start_lsn, @end_lsn, 'all') ";
+            */
             string _sqlqryinsert = _sqlqrygetmaxlsn + " if not exists(select 1 from sqlcdcapp.connection_details " +
-            " where srcserver='" + srcserver + "' and destserver='" + destserver + "' and srcdb='" + srcdb + "' and srctable='" + srctable.Replace("_", ".") + "' and desttable='" + desttable + "') " +
+            " where srcserver='" + srcserver + "' and destserver='" + destserver + "' and srcdb='" + srcdb + "' and srctable='" + 
+            srctable.ReplaceFirstOccurrance("_", ".") + "' " +
+            " and desttable='" + desttable + "' and captureinstance='" + captureinstance + "')" +
             " begin " +
             " INSERT INTO sqlcdcapp.connection_details " +
-            " (srcserver,destserver,srcdb,destdb,srctable,desttable,userid,password) " +
+            " (srcserver,destserver,srcdb,destdb,srctable,desttable,userid,password,captureinstance) " +
                 //" OUTPUT INSERTED.Cnid,'" + captureinstance + "',@reccount,@maxlsn,getdate(),SUSER_NAME() into sqlcdcapp.IDLoad" +
             " VALUES('" + srcserver + "','" + destserver + "','" + srcdb + "','"
-                + destdb + "','" + srctable.Replace("_", ".") + "','" + desttable + "','" + userid + "','" + password + "') END " +
+                + destdb + "','" + srctable.ReplaceFirstOccurrance("_", ".") + "','" + desttable + "','" + userid + "','" +
+                password + "','" + captureinstance + "')" +
             " INSERT INTO sqlcdcapp.IDLoad (captureInstance,srclaststartlsn,srclastsyncdate,srcsynclogin,recordsinserted) " +
-            " VALUES('" + captureinstance + "',@maxlsn,GetDate(),SUser_Name(),@reccount)" +
+            " VALUES('" + captureinstance + "',@maxlsn,GetDate(),SUser_Name(),0) END " +
             " COMMIT TRAN ";
             
 
 
-            _sqlqrycreatetable = _sqlqrycreatetable + _sqlqryinsert;
-            fn_ExecuteQuery(_sqlqrycreatetable, "SQLCDCApp");
+           // _sqlqrycreatetable = _sqlqrycreatetable + _sqlqryinsert;
+            QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true),
+    "SQLCDCApp", Settings1.Default.AuthenticationType);
 
-
+            _qe.fn_ExecuteQuery(_sqlqryinsert);
 
         }
-        
+
+        /// <summary>
+        /// check whether table has been initialised for export.
+        /// </summary>
+        /// <param name="captureinstane"></param>
+        /// <param name="databasename"></param>
+        /// <returns></returns>
+        public string fn_CheckExportDone(string captureinstane,string databasename)
+        {
+
+            //string _query = " if exists (select top(1) Cnid from SQLCDCApp.sqlcdcapp.connection_details ssc join SQLCDCApp.sqlcdcapp.IDLoad ssi " +
+            //               " on ssc.captureinstance=ssi.captureinstance where (ssc.SQLJobID is null and ssi.SQLJobID is null) and ssi.srclaststartlsn " +
+            //               " is not null and ssc.captureinstance='" + captureinstane + "' and ssc.srcserver='" + Settings1.Default.Server + "' and ssc.srcdb='" + databasename + "' ) " +
+            //               " begin select 'true' end else begin select 'False' end";
+            string _query = " if exists (select top(1) Cnid from SQLCDCApp.sqlcdcapp.connection_details ssc join SQLCDCApp.sqlcdcapp.IDLoad ssi " +
+                          " on ssc.captureinstance=ssi.captureinstance where (ssc.SQLJobID is null and ssi.SQLJobID is null) " +
+                          " and ssc.captureinstance='" + captureinstane + "' and ssc.srcserver='" + Settings1.Default.Server + "' and ssc.srcdb='" + databasename + "' ) " +
+                          " begin select 'true' end else begin select 'False' end";
+            string output = "";
+            QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true),
+     "SQLCDCApp", Settings1.Default.AuthenticationType);
+            output = _qe.fn_ExecuteScalor(_query);
+            return output;
+        }
+
+        /// <summary>
+        /// create meta tables
+        /// </summary>
+        public void fn_initialiseMetatables()
+        {
+            try
+            {
+                string _sqlqrycreatetable = "if not exists(select 1 from sys.schemas where name ='sqlcdcapp')" +
+                " BEGIN " +
+                " EXEC('CREATE SCHEMA sqlcdcapp authorization dbo') " +
+                " END " +
+                " if (object_id('sqlcdcapp.connection_details')) is null " +
+                " BEGIN " +
+                " CREATE TABLE sqlcdcapp.connection_details ( " +
+                " Cnid int identity Primary Key,srcserver varchar(50), destserver varchar(50), srcdb varchar(50), " +
+                " destdb varchar(50), srctable varchar(100), desttable varchar(100),userid varchar(100) DEFAULT('$$@#$$'), " +
+                " password nvarchar(200),Enabled bit Default(1),captureinstance varchar(100),SQLJobID uniqueidentifier Default(NULL),DateModified Datetime Default(Getdate())) END ";
+
+                _sqlqrycreatetable = _sqlqrycreatetable + System.Environment.NewLine + " if (object_id('sqlcdcapp.IDLoad')) is null  " +
+                " BEGIN " +
+                " Create table sqlcdcapp.IDLoad (" +
+                " sdid int identity Primary Key,captureinstance varchar(100), srclaststartlsn nvarchar(42), " +
+                " srclastsyncdate datetime,srcsynclogin varchar(100),SQLJobID UniqueIdentifier DEFAULT(NULL),RecordsInserted int default(0) " +
+                " ,RecordsDeleted int Default(0),RecordsUpdated int Default(0)) END";
+                QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true),
+    "SQLCDCApp", Settings1.Default.AuthenticationType);
+                _qe.fn_ExecuteQuery(_sqlqrycreatetable);
+            }catch(Exception)
+            {
+                throw;
+            }
+        }
+
+        public void fn_disablecaptureinstance(List<CDC> cdclist)
+        {
+            try
+            {
+                string _query;
+                QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User,
+                  Crypto.Crypto.Decrypt(Settings1.Default.Password, true), "SQLCDCApp", Settings1.Default.AuthenticationType);
+
+                foreach (CDC obj in cdclist)
+                {
+                    _query = " update sqlcdcapp.connection_details set Enabled=0, DateModified=getdate() where srcserver='" + Settings1.Default.Server + "' and srcdb='"
+                        + obj.Databasename + "' and srctable='" + obj.source_schema + "." + obj.source_name + "'";
+                    _qe.fn_ExecuteQuery(_query);
+                }
+            }catch(Exception)
+            {
+                throw;
+            }
+            
+        }
+
+        /*
+        public DataTable fn_Getcaptureinstances()
+        {
+            string _qry = " select captureinstance from sqlcdcapp.connection_details where srcserver='" + Settings1.Default.Server +
+                "' and srcdb='" + db + "' and srctable='" + tablename + "'";
+            try
+            {
+                QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User,
+                    Crypto.Crypto.Decrypt(Settings1.Default.Password, true), "SQLCDCApp", Settings1.Default.AuthenticationType);
+                DataTable _dtci = _qe.fn_ExecuteTable(_qry);
+                return _dtci;
+
+            }catch(Exception)
+            {
+                throw;
+            }
+        }
+        */
+ /*
+        public DataTable fn_getexportrecord()
+        {
+            try
+            {
+                string query = " select distinct ssc.captureinstance,ssc.srcserver,ssc.srcdb,ssc.srctable, " +
+                              " ssc.destserver,ssc.destdb,ssc.desttable from SQLCDCApp.sqlcdcapp.connection_details ssc " +
+                              " join SQLCDCApp.sqlcdcapp.IDLoad ssi on ssc.captureinstance=ssi.captureinstance where " +
+                              " (ssc.SQLJobID is null and ssi.SQLJobID is null) and ssi.srclaststartlsn  is not null ";
+                DataTable dtresult = fn_ExecuteReader(query, "SQLCDCApp");
+                return dtresult;
+            }catch(Exception)
+            {
+                throw;
+            }
+        }
+   */
+        public void fn_setsqljobid(Guid sqljobid,string captureinstance,string database,string srctable,string desttable,string destdb,string destserver)
+        {
+            try
+            {
+                string _query = "update sqlcdcapp.connection_details set sqljobid='" + sqljobid + "'" +
+                    " where captureinstance='" + captureinstance + "' and srcserver='" + Settings1.Default.Server + "' and desttable='" + desttable + "'" +
+                    " and srcdb ='" + database + "' and srctable='" + srctable.ReplaceFirstOccurrance("_", ".") + "' and sqljobid is null " +
+                    " and destserver='" + destserver + "' and destdb='" + destdb + "'" + 
+                    " update sqlcdcapp.IDload set sqljobid='" + sqljobid + "' where captureinstance='" + captureinstance + "'";
+                QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true),
+    "SQLCDCApp", Settings1.Default.AuthenticationType);
+                _qe.fn_ExecuteQuery(_query);
+
+            }catch(Exception)
+            {
+                throw;
+            }
+
+        }
     }
 
    public class Tables
@@ -724,7 +941,9 @@ namespace SQLCDCApp
             SQLCDCApp obj = new SQLCDCApp();
             string _sqlqry="SELECT 'true' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE OBJECTPROPERTY(OBJECT_ID(constraint_name), 'IsPrimaryKey') = 1 " +
             " AND table_name ='" + name + "'";
-            string output = obj.fn_Executescalor(_sqlqry, Database);
+            QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true),
+   Database, Settings1.Default.AuthenticationType);
+            string output = _qe.fn_ExecuteScalor(_sqlqry );
             if(string.IsNullOrEmpty(output))
             {
                 this._primary_key_enabled = false;
@@ -739,59 +958,6 @@ namespace SQLCDCApp
 
     }
 
-
-    //public class Crypto
-    //{
-    //    /// <summary>
-    //    /// encrypt a string
-    //    /// </summary>
-    //    /// <param name="toEncrypt"></param>
-    //    /// <param name="useHashing"></param>
-    //    /// <returns></returns>
-    //    public static string Encrypt(string toEncrypt, bool useHashing)
-    //    {
-    //        byte[] keyArray;
-    //        byte[] toEncryptArray = UTF8Encoding.UTF8.GetBytes(toEncrypt);
-
-    //        //System.Configuration.AppSettingsReader settingsReader =  new AppSettingsReader();
-    //        // Get the key from config file
-            
-    //        //string key = (string)settingsReader.GetValue("SecurityKey", typeof(String));
-    //        string key = "09153056t343984y59y4594337";
-    //        //System.Windows.Forms.MessageBox.Show(key);
-    //        //If hashing use get hashcode regards to your key
-    //        if (useHashing)
-    //        {
-    //            MD5CryptoServiceProvider hashmd5 = new MD5CryptoServiceProvider();
-    //            keyArray = hashmd5.ComputeHash(UTF8Encoding.UTF8.GetBytes(key));
-    //            //Always release the resources and flush data
-    //            // of the Cryptographic service provide. Best Practice
-
-    //            hashmd5.Clear();
-    //        }
-    //        else
-    //            keyArray = UTF8Encoding.UTF8.GetBytes(key);
-
-    //        TripleDESCryptoServiceProvider tdes = new TripleDESCryptoServiceProvider();
-    //        //set the secret key for the tripleDES algorithm
-    //        tdes.Key = keyArray;
-    //        //mode of operation. there are other 4 modes.
-    //        //We choose ECB(Electronic code Book)
-    //        tdes.Mode = CipherMode.ECB;
-    //        //padding mode(if any extra byte added)
-
-    //        tdes.Padding = PaddingMode.PKCS7;
-
-    //        ICryptoTransform cTransform = tdes.CreateEncryptor();
-    //        //transform the specified region of bytes array to resultArray
-    //        byte[] resultArray =
-    //          cTransform.TransformFinalBlock(toEncryptArray, 0,
-    //          toEncryptArray.Length);
-    //        //Release resources held by TripleDes Encryptor
-    //        tdes.Clear();
-    //        //Return the encrypted data into unreadable string format
-    //        return Convert.ToBase64String(resultArray, 0, resultArray.Length);
-    //    }
 
        
 
@@ -812,5 +978,23 @@ namespace SQLCDCApp
         public List<CDC> cdclist { get; set; }
  
     }
+    
+    /// <summary>
+    /// extends string to add new generic functions
+    /// </summary>
+   public static class StringExtenstion
+   {
 
+       public static string ReplaceFirstOccurrance(this string original, string oldValue, string newValue)
+       {
+           if (String.IsNullOrEmpty(original))
+               return String.Empty;
+           if (String.IsNullOrEmpty(oldValue))
+               return original;
+           if (String.IsNullOrEmpty(newValue))
+               newValue = String.Empty;
+           int loc = original.IndexOf(oldValue);
+           return original.Remove(loc, oldValue.Length).Insert(loc, newValue);
+       }
+   }
 }
