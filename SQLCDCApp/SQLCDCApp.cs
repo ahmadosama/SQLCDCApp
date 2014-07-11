@@ -578,7 +578,7 @@ namespace SQLCDCApp
         /// <param name="desttable"></param>
         /// <param name="createtable"></param>
         /// <param name="DestDatabase"></param>
-        public int fn_ExportToDB(DataTable srctable,string desttable,bool createtable,string DestDatabase,
+        public int fn_ExportToDB(DataTable srctable,string desttable,string DestDatabase,
             string exportcheck="true",string sourcedb=null,string destinationdb=null)
         {
             DataTable tmpsrctable = srctable.Copy();
@@ -607,22 +607,22 @@ namespace SQLCDCApp
                 QueryExecution _qe = new QueryExecution(Settings1.Default.Destserver, Settings1.Default.Destuser, Crypto.Crypto.Decrypt(Settings1.Default.Destpassword, true),
     DestDatabase, Settings1.Default.Destauthtype);
                 // create destination table if doesn't exists
-                if(createtable)
-                {
-                    string _sql = "If (object_id('" + desttable + "')) is null CREATE TABLE [" + desttable + "] (";
-                    // columns
-                    foreach (DataColumn column in tmpsrctable.Columns)
-                    {
-                        //if (column.ColumnName != "__$start_lsn" && column.ColumnName != "__$seqval" && column.ColumnName != "__$operation" && column.ColumnName != "__$update_mask")
-                        _sql += "[" + column.ColumnName + "] " + SQLGetType(column) + ",";
-                    }
-                    _sql = _sql + " DateLastUpdated Datetime default(getdate()))";
-                    //sql = sql.Substring(0,sql.Length-1) + ")";
-                    _qe.fn_ExecuteQuery(_sql);
-                    
-                    //fn_ExecuteQuery(sql, DestDatabase);
+                //if(createtable)
+                //{
+                //    //string _sql = "If (object_id('" + desttable + "')) is null CREATE TABLE [" + desttable + "] (";
+                //    //// columns
+                //    //foreach (DataColumn column in tmpsrctable.Columns)
+                //    //{
+                //    //    //if (column.ColumnName != "__$start_lsn" && column.ColumnName != "__$seqval" && column.ColumnName != "__$operation" && column.ColumnName != "__$update_mask")
+                //    //    _sql += "[" + column.ColumnName + "] " + SQLGetType(column) + ",";
+                //    //}
+                //    //_sql = _sql + " DateLastUpdated Datetime default(getdate()))";
+                //    ////sql = sql.Substring(0,sql.Length-1) + ")";
+                //    //_qe.fn_ExecuteQuery(_sql);
+                //   // fn_copytableschema(tmpsrctable, desttable, _qe);
+                //    //fn_ExecuteQuery(sql, DestDatabase);
 
-                }
+                //}
 
                 int _recordcount = 0;
                 // bulk copy srctable into sql server
@@ -634,7 +634,6 @@ namespace SQLCDCApp
                     _recordcount = tmpsrctable.Rows.Count;
                 }else if (exportcheck=="false")
                 {
-                    
                     _recordcount=fn_exportalldata(sourcedb,srctable.TableName.ToString() , destinationdb, desttable);
                 }
 
@@ -642,7 +641,29 @@ namespace SQLCDCApp
             }
             catch (Exception)
             {
+                throw;
+            }
+        }
 
+        public void fn_copytableschema(DataTable srctable, string desttable, string DestDatabase)
+        {
+            try
+            {
+                QueryExecution _qe = new QueryExecution(Settings1.Default.Destserver, Settings1.Default.Destuser,
+                    Crypto.Crypto.Decrypt(Settings1.Default.Destpassword, true), DestDatabase, Settings1.Default.Destauthtype);
+
+                string _sql = "If (object_id('" + desttable + "')) is null CREATE TABLE [" + desttable + "] (";
+
+
+                foreach (DataColumn column in srctable.Columns)
+                {
+                    _sql += "[" + column.ColumnName + "] " + SQLGetType(column) + ",";
+                }
+                _sql = _sql + " DateLastUpdated Datetime default(getdate()))";
+
+                _qe.fn_ExecuteQuery(_sql);
+            }catch(Exception)
+            {
                 throw;
             }
         }
