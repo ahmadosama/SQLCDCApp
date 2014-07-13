@@ -19,37 +19,6 @@ namespace SQLCDCApp
         public string DatabaseName { get; set; }
         public  string is_cdc_enabled { get; set; }
         
-        /// <summary>
-        /// returns a sql connection
-        /// </summary>
-        /// <returns></returns>
-     /*   public SqlConnection fn_ConnecttoSQL()
-        {
-           
-            string _ConnectionString = "";
-            try
-            {
-                if (Settings1.Default.AuthenticationType == "Windows")
-                {
-                    _ConnectionString = "Initial Catalog=master;Data Source=" + Settings1.Default.Server + ";Integrated Security=True;";
-                }
-                else
-                {
-                    _ConnectionString = "Initial Catalog=master;Data Source=" + Settings1.Default.Server + ";user id=" + Settings1.Default.User + ";password=" + Settings1.Default.Password;
-                }
-
-                SqlConnection _sqlcon = new SqlConnection();
-                _sqlcon.ConnectionString = _ConnectionString;
-                _sqlcon.Open();
-                return _sqlcon;
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-        }
-        */
-
         public bool fn_SQLAgentStatusCheck()
         {
             QueryExecution _qe = new QueryExecution(Settings1.Default.Server, Settings1.Default.User, Crypto.Crypto.Decrypt(Settings1.Default.Password, true), "master", Settings1.Default.AuthenticationType);
@@ -87,10 +56,7 @@ namespace SQLCDCApp
             try
             {
                 Genericsql _gs = new Genericsql();
-                //string _querytolistdatabases ="Select name,CASE is_cdc_enabled WHEN 0 Then 'False' WHEN 1 THEN 'True' END AS is_cdc_enabled from "+
-                //" sys.databases where database_id>4 and state_desc='Online' order by is_cdc_enabled desc ";
                 DataTable dtdbs=_gs.databaselist(_qe);
-                //DataTable dtdbs = _qe.fn_ExecuteTable(_querytolistdatabases);
                 return dtdbs;
             }
             
@@ -102,111 +68,6 @@ namespace SQLCDCApp
            
         }
         
-        /// <summary>
-        /// execute non query
-        /// </summary>
-        /// <param name="sqlqry"></param>
-        /// <param name="DatabaseName"></param>
-        /// <returns></returns>
-    /*    private bool fn_ExecuteQuery(string sqlqry,string DatabaseName)
-        {
-            SqlConnection _Sqlcon = new SqlConnection();
-            _Sqlcon = fn_ConnecttoSQL();
-            try
-            {
-
-                if (_Sqlcon.State.ToString() == "Closed")
-                {
-                    _Sqlcon.Open();
-                }
-
-                _Sqlcon.ChangeDatabase(DatabaseName);
-                SqlCommand SqlCmd = new SqlCommand(sqlqry, _Sqlcon);
-                SqlCmd.ExecuteNonQuery();
-                
-                return true;
-            }
-            catch (Exception)
-            {
-               
-
-                throw;
-            }
-
-            finally { _Sqlcon.Close(); }
-        }
-
-        */
-        /*
-        public string fn_Executescalor(string sqlqry, string DatabaseName)
-        {
-            SqlConnection _Sqlcon = new SqlConnection();
-            _Sqlcon = fn_ConnecttoSQL();
-            try
-            {
-
-                if (_Sqlcon.State.ToString() == "Closed")
-                {
-                    _Sqlcon.Open();
-                }
-
-                _Sqlcon.ChangeDatabase(DatabaseName);
-                SqlCommand SqlCmd = new SqlCommand(sqlqry, _Sqlcon);
-                string output = (string)SqlCmd.ExecuteScalar();
-
-                return output;
-            }
-            catch (Exception)
-            {
-
-
-                throw;
-            }
-
-            finally { _Sqlcon.Close(); }
-        }
-        */
-        /// <summary>
-        /// executes a query and returns a datatable
-        /// </summary>
-        /// <param name="sqlqry"></param>
-        /// <param name="DatabaseName"></param>
-        /// <returns></returns>
-        /*
-        private DataTable fn_ExecuteReader(string sqlqry, string DatabaseName)
-        {
-            SqlConnection _Sqlcon = new SqlConnection();
-            SqlDataReader dr ;
-            //IENumerableExtensions ie;
-            _Sqlcon = fn_ConnecttoSQL();
-            try
-            {
-
-                if (_Sqlcon.State.ToString() == "Closed")
-                {
-                    _Sqlcon.Open();
-                }
-
-                
-                _Sqlcon.ChangeDatabase(DatabaseName);
-                SqlCommand SqlCmd = new SqlCommand(sqlqry, _Sqlcon);
-                dr=SqlCmd.ExecuteReader();
-
-                var dt = new DataTable();
-                dt.Load(dr);
-             
-                return dt;
-                
-
-            }
-            catch (SqlException)
-            {
-                throw;
-            }
-
-          //  finally { _Sqlcon.Close(); }
-        }
-        */
         /// <summary>
         /// Enable CDC on selected databases
         /// </summary>
@@ -383,16 +244,8 @@ namespace SQLCDCApp
         public List<string> fn_CaptureInstance(List<CDC> cdclist)
         {
             List<string> lst = new List<string>();
-            //SqlConnection _Sqlcon = new SqlConnection();
-            //SqlDataReader Datareader; 
-            //_Sqlcon = fn_ConnecttoSQL();
             try
             {
-                //if (_Sqlcon.State.ToString() == "Closed")
-                //{
-                //    _Sqlcon.Open();
-                //}
-
                 foreach(CDC cdcobj in cdclist)
                 {
                     //_Sqlcon.ChangeDatabase(cdcobj.Databasename);
@@ -402,14 +255,6 @@ namespace SQLCDCApp
     cdcobj.Databasename, Settings1.Default.AuthenticationType);
                     DataTable _dt = _qe.fn_ExecuteTable(_qry);
                     
-                   /*
-                    SqlCommand sqlcmd = new SqlCommand(Qry, _Sqlcon);
-                    Datareader=sqlcmd.ExecuteReader();
-                    while (Datareader.Read())
-                    {
-                        lst.Add(Datareader[0].ToString());
-                    }
-                    */
                     foreach (DataRow _dr in _dt.Rows)
                     {
                         lst.Add(_dr[0].ToString());
@@ -606,36 +451,18 @@ namespace SQLCDCApp
 
                 QueryExecution _qe = new QueryExecution(Settings1.Default.Destserver, Settings1.Default.Destuser, Crypto.Crypto.Decrypt(Settings1.Default.Destpassword, true),
     DestDatabase, Settings1.Default.Destauthtype);
-                // create destination table if doesn't exists
-                //if(createtable)
-                //{
-                //    //string _sql = "If (object_id('" + desttable + "')) is null CREATE TABLE [" + desttable + "] (";
-                //    //// columns
-                //    //foreach (DataColumn column in tmpsrctable.Columns)
-                //    //{
-                //    //    //if (column.ColumnName != "__$start_lsn" && column.ColumnName != "__$seqval" && column.ColumnName != "__$operation" && column.ColumnName != "__$update_mask")
-                //    //    _sql += "[" + column.ColumnName + "] " + SQLGetType(column) + ",";
-                //    //}
-                //    //_sql = _sql + " DateLastUpdated Datetime default(getdate()))";
-                //    ////sql = sql.Substring(0,sql.Length-1) + ")";
-                //    //_qe.fn_ExecuteQuery(_sql);
-                //   // fn_copytableschema(tmpsrctable, desttable, _qe);
-                //    //fn_ExecuteQuery(sql, DestDatabase);
-
-                //}
-
                 int _recordcount = 0;
                 // bulk copy srctable into sql server
-                if (exportcheck == "true")
-                {
-                    if(srctable.Rows.Count==0)
-                    { throw new ApplicationException("No data to export!!!"); }
-                    _qe.fn_sqlbulkinsert(tmpsrctable, desttable);
-                    _recordcount = tmpsrctable.Rows.Count;
-                }else if (exportcheck=="false")
-                {
-                    _recordcount=fn_exportalldata(sourcedb,srctable.TableName.ToString() , destinationdb, desttable);
-                }
+                //if (exportcheck == "true")
+                //{
+                //    if(srctable.Rows.Count==0)
+                //    { throw new ApplicationException("No data to export!!!"); }
+                //    _qe.fn_sqlbulkinsert(tmpsrctable, desttable);
+                //    _recordcount = tmpsrctable.Rows.Count;
+                //}else if (exportcheck=="false")
+                //{
+                   _recordcount=fn_exportalldata(sourcedb,srctable.TableName.ToString() , destinationdb, desttable);
+                
 
                 return _recordcount;
             }
@@ -645,23 +472,25 @@ namespace SQLCDCApp
             }
         }
 
-        public void fn_copytableschema(DataTable srctable, string desttable, string DestDatabase)
+        public void fn_copytableschema(string srctable, string desttable, string DestDatabase,string srcdb)
         {
             try
             {
-                QueryExecution _qe = new QueryExecution(Settings1.Default.Destserver, Settings1.Default.Destuser,
+                QueryExecution _dqe = new QueryExecution(Settings1.Default.Destserver, Settings1.Default.Destuser,
                     Crypto.Crypto.Decrypt(Settings1.Default.Destpassword, true), DestDatabase, Settings1.Default.Destauthtype);
-
+                QueryExecution _sqe = new QueryExecution(Settings1.Default.Server,
+                    Settings1.Default.User,Crypto.Crypto.Decrypt(Settings1.Default.Password, true),srcdb,Settings1.Default.AuthenticationType);
                 string _sql = "If (object_id('" + desttable + "')) is null CREATE TABLE [" + desttable + "] (";
+                DataTable _tde = _sqe.fn_ExecuteTable("Select * from " + srctable + " where 1=2");
 
-
-                foreach (DataColumn column in srctable.Columns)
+                foreach (DataColumn column in _tde.Columns)
                 {
                     _sql += "[" + column.ColumnName + "] " + SQLGetType(column) + ",";
                 }
-                _sql = _sql + " DateLastUpdated Datetime default(getdate()))";
+               // _sql = _sql.Substring(0, (_sql.Length - 1)) + ')';
+                _sql = _sql + " Operation varchar(100), DateLastUpdated Datetime default(getdate()))";
 
-                _qe.fn_ExecuteQuery(_sql);
+                _dqe.fn_ExecuteQuery(_sql);
             }catch(Exception)
             {
                 throw;

@@ -181,7 +181,7 @@
             // button_disablecdc
             // 
             this.button_disablecdc.Enabled = false;
-            this.button_disablecdc.Location = new System.Drawing.Point(148, 296);
+            this.button_disablecdc.Location = new System.Drawing.Point(107, 296);
             this.button_disablecdc.Name = "button_disablecdc";
             this.button_disablecdc.Size = new System.Drawing.Size(75, 23);
             this.button_disablecdc.TabIndex = 12;
@@ -192,7 +192,7 @@
             // button_getables
             // 
             this.button_getables.Enabled = false;
-            this.button_getables.Location = new System.Drawing.Point(281, 296);
+            this.button_getables.Location = new System.Drawing.Point(188, 296);
             this.button_getables.Name = "button_getables";
             this.button_getables.Size = new System.Drawing.Size(75, 23);
             this.button_getables.TabIndex = 11;
@@ -221,7 +221,7 @@
             this.dataGridView_Databases.Location = new System.Drawing.Point(18, 45);
             this.dataGridView_Databases.Name = "dataGridView_Databases";
             this.dataGridView_Databases.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
-            this.dataGridView_Databases.Size = new System.Drawing.Size(338, 221);
+            this.dataGridView_Databases.Size = new System.Drawing.Size(363, 221);
             this.dataGridView_Databases.TabIndex = 9;
             this.dataGridView_Databases.ColumnHeaderMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.dataGridView_Databases_ColumnHeaderMouseClick);
             this.dataGridView_Databases.DataBindingComplete += new System.Windows.Forms.DataGridViewBindingCompleteEventHandler(this.dataGridView_Databases_DataBindingComplete);
@@ -231,9 +231,9 @@
             // 
             this.dataGridView_tables.BackgroundColor = System.Drawing.SystemColors.Control;
             this.dataGridView_tables.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView_tables.Location = new System.Drawing.Point(28, 48);
+            this.dataGridView_tables.Location = new System.Drawing.Point(28, 52);
             this.dataGridView_tables.Name = "dataGridView_tables";
-            this.dataGridView_tables.Size = new System.Drawing.Size(469, 193);
+            this.dataGridView_tables.Size = new System.Drawing.Size(469, 189);
             this.dataGridView_tables.TabIndex = 1;
             this.dataGridView_tables.ColumnHeaderMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.dataGridView_tables_ColumnHeaderMouseClick);
             this.dataGridView_tables.DataBindingComplete += new System.Windows.Forms.DataGridViewBindingCompleteEventHandler(this.dataGridView_tables_DataBindingComplete);
