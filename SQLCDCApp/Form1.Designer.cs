@@ -167,7 +167,6 @@
             this.textBox_Server.Name = "textBox_Server";
             this.textBox_Server.Size = new System.Drawing.Size(100, 20);
             this.textBox_Server.TabIndex = 1;
-            this.textBox_Server.Text = ".\\sql2014";
             // 
             // label_Server
             // 
