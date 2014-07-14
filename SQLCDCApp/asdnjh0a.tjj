@@ -1,0 +1,186 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Data;
+using System.Data.Sql;
+using System.Data.SqlClient;
+using System.Threading.Tasks;
+
+namespace SQLCDCApp
+{
+    /// <summary>
+    /// Connects to SQL Server
+    /// </summary>
+    // class ConnecttoSQL
+    //{
+    //    public string ServerName { get; set; }
+    //    public string UserName { get; set; }
+    //    public string AuthenticationType { get; set; }
+    //    public string Password { get; set; }
+
+    //    public SqlConnection fn_ConnecttoSQL()
+    //    {
+    //        ServerName = Settings1.Default.Server;
+    //        string _ConnectionString = "";
+    //        try
+    //        {
+    //            if (AuthenticationType == "Windows")
+    //            {
+    //                _ConnectionString = "Initial Catalog=master;Data Source=" + ServerName + ";Integrated Security=True;";
+    //            }
+    //            else
+    //            {
+    //                _ConnectionString = "Initial Catalog=master;Data Source=" + ServerName + ";user id=" + UserName + ";password=" + Password;
+    //            }
+
+    //            SqlConnection _sqlcon = new SqlConnection();
+    //            _sqlcon.ConnectionString = _ConnectionString;
+    //            _sqlcon.Open();
+    //            return _sqlcon;
+    //        }
+    //        catch (Exception)
+    //        {
+    //            throw;
+    //        }
+    //    }
+
+    //}
+
+    /// <summary>
+    /// Main logic is here
+    /// </summary>
+    class SQLCDCApp
+    {
+
+        
+        //public bool connect { get; set; }
+        public string DatabaseName { get; set; }
+        public  string is_cdc_enabled { get; set; }
+       
+        public SqlConnection fn_ConnecttoSQL()
+        {
+           
+            string _ConnectionString = "";
+            try
+            {
+                if (Settings1.Default.AuthenticationType == "Windows")
+                {
+                    _ConnectionString = "Initial Catalog=master;Data Source=" + Settings1.Default.Server + ";Integrated Security=True;";
+                }
+                else
+                {
+                    _ConnectionString = "Initial Catalog=master;Data Source=" + Settings1.Default.Server + ";user id=" + Settings1.Default.User + ";password=" + Settings1.Default.Password;
+                }
+
+                SqlConnection _sqlcon = new SqlConnection();
+                _sqlcon.ConnectionString = _ConnectionString;
+                _sqlcon.Open();
+                return _sqlcon;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Connects to sql server
+        /// returns true when successfull
+        /// </summary>
+        /// <returns></returns>
+        
+        public List<SQLCDCApp> fn_GetDatabases()
+        {
+            List<SQLCDCApp> _listdatabases= new List<SQLCDCApp>();
+            SqlConnection _Sqlcon = new SqlConnection();
+            _Sqlcon = fn_ConnecttoSQL();
+           try
+           {
+               if (_Sqlcon.State.ToString() == "Closed")
+            {
+                _Sqlcon.Open();
+            }
+
+               SqlCommand SQLGetDatabases = new SqlCommand("Select name,is_cdc_enabled from sys.databases where database_id>4 and state_desc='Online'", _Sqlcon);
+            SqlDataReader Datareader;
+            Datareader=SQLGetDatabases.ExecuteReader();
+            while(Datareader.Read())
+            {
+                SQLCDCApp obj = new SQLCDCApp();
+                obj.DatabaseName = Datareader[0].ToString();
+                obj.is_cdc_enabled = Datareader[1].ToString();
+                //obj.state = Datareader[2].ToString();
+                _listdatabases.Add(obj);
+            }
+
+            return _listdatabases;
+            }
+           catch(Exception) 
+            {
+               throw;
+            }
+           
+            finally{
+                _Sqlcon.Close();
+            }
+        }
+        
+        private bool fn_ExecuteQuery(string sqlqry,string DatabaseName)
+        {
+            SqlConnection _Sqlcon = new SqlConnection();
+            _Sqlcon = fn_ConnecttoSQL();
+            try
+            {
+
+                if (_Sqlcon.State.ToString() == "Closed")
+                {
+                    _Sqlcon.Open();
+                }
+
+                _Sqlcon.ChangeDatabase(DatabaseName);
+                SqlCommand SqlCmd = new SqlCommand(sqlqry, _Sqlcon);
+                SqlCmd.ExecuteReader();
+                
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+
+                throw;
+            }
+
+            finally { _Sqlcon.Close(); }
+        }
+
+        /// <summary>
+        /// Enable CDC on selected databases
+        /// </summary>
+        /// <param name="ListDbtoEnableCDC"></param>
+        /// <returns></returns>
+        public bool fn_EnableCDC(List<string> ListDbtoEnableCDC)
+        {
+           
+           
+            try
+            {
+                foreach (string db in ListDbtoEnableCDC)
+                {
+                    fn_ExecuteQuery ("Exec sp_cdc_enable_db ", db);
+                    
+                }
+                return true;
+            }
+            catch(Exception)
+            {
+                return false;
+
+                throw;
+            }
+            finally { _Sqlcon.Close(); }
+            
+        }
+
+    }
+}
